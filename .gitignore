@@ -52,5 +52,6 @@ Mkfile.old
 dkms.conf
 
 # Debug Files 
-Debug/
-
+*.list
+Debug
+*.launch
