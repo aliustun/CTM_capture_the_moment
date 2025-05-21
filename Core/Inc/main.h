@@ -31,7 +31,12 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_DCMI_Init(void);
+static void MX_DMA2D_Init(void);
+static void MX_I2C1_Init(void);
+static void MX_SPI5_Init(void);
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
