@@ -86,11 +86,10 @@
 
 #include "stm32f4xx_hal.h"
 #include "main.h"
-extern SPI_HandleTypeDef hspi5;
 
 
 #define ILI9341_SCREEN_HEIGHT 240
-#define ILI9341_SCREEN_WIDTH 	320
+#define ILI9341_SCREEN_WIDTH  320
 
 //SPI INSTANCE
 #define HSPI_INSTANCE							&hspi5
