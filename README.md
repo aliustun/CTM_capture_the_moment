@@ -1,1 +1,0 @@
-# CTM_capture_the_moment

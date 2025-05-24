@@ -1,0 +1,9 @@
+../Core/Src/camera_drv.c:132:23:Camera_Open	16	static
+../Core/Src/camera_drv.c:143:6:Camera_Delay	16	static
+../Core/Src/camera_drv.c:148:30:Camera_Init	16	static
+../Core/Src/camera_drv.c:166:6:Camera_Write	40	static
+../Core/Src/camera_drv.c:183:13:Camera_GPIO_Init	56	static
+../Core/Src/camera_drv.c:232:30:Camera_DCMI_Init	8	static
+../Core/Src/camera_drv.c:249:13:Camera_XCLK_Init	16	static
+../Core/Src/camera_drv.c:255:30:Camera_DMA_Init	8	static
+../Core/Src/camera_drv.c:282:30:Camera_I2C_Init	8	static
