@@ -33,7 +33,7 @@ Each task uses `osDelay`, mutexes or semaphores to synchronize access to the sha
 
 ## 4. DMA and Interrupt-Based Frame Capture
 
-DMA is configured to transfer camera data from DCMI to RAM[^6], triggered on frame complete interrupts. This minimizes CPU overhead.
+DMA is configured to transfer camera data from DCMI to RAM[^7], triggered on frame complete interrupts. This minimizes CPU overhead.
 
 - **DCMI_IRQHandler**: Signals a task via semaphore or event flag.
 - **DMA Interrupt**: Ensures frame is fully transferred before display.
@@ -83,4 +83,5 @@ This project demonstrates a basic embedded vision pipeline using RTOS. Future ex
 [^3]: Digital Camera Interface
 [^4]: Direct Memory Access
 [^5]: Serial Camera Control Bus
-[^6]: Random Access Memory
+[^6]: Serial Peripheral Interface
+[^7]: Random Access Memory
