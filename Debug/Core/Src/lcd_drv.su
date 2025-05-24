@@ -1,0 +1,15 @@
+../Core/Src/lcd_drv.c:53:20:LCD_Open	8	static
+../Core/Src/lcd_drv.c:62:27:LCD_GPIO_Init	48	static
+../Core/Src/lcd_drv.c:97:27:LCD_SPI_Init	8	static
+../Core/Src/lcd_drv.c:120:6:LCD_Reset	8	static
+../Core/Src/lcd_drv.c:129:6:LCD_Enable	8	static
+../Core/Src/lcd_drv.c:134:27:LCD_Init	8	static
+../Core/Src/lcd_drv.c:250:6:LCD_SPI_Send	24	static
+../Core/Src/lcd_drv.c:255:6:LCD_Write_Command	16	static
+../Core/Src/lcd_drv.c:263:6:LCD_Write_Data	16	static
+../Core/Src/lcd_drv.c:270:6:LCD_Set_Cursor_Position	24	static
+../Core/Src/lcd_drv.c:284:6:LCD_Draw_Pixel	16	static
+../Core/Src/lcd_drv.c:291:6:LCD_Fill_Screen	24	static
+../Core/Src/lcd_drv.c:310:6:LCD_Delay	16	static
+../Core/Src/lcd_drv.c:316:6:LCD_Display_Image	32	static
+../Core/Src/lcd_drv.c:339:6:LCD_Set_Rotation	24	static
