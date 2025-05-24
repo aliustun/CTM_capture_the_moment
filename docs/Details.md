@@ -16,7 +16,7 @@ The system consists of a camera input, memory buffering using DMA[^4], and LCD o
 - **FreeRTOS** for managing concurrent tasks
 
 ```mermaid
-flowchart LR
+flowchart TD
   OV7670 -->|DCMI + SSCB + DMA| RAM[Frame Buffer]
   RAM -->|SPI with ILI9341 LCD Driver| LCD
   FreeRTOS -->|Schedules| Tasks
