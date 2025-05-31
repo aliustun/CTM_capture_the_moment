@@ -33,6 +33,16 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
+uint16_t processed_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
+
+extern DCMI_HandleTypeDef hdcmi;
+volatile uint8_t dma_transfer_done_flag = 0;
+
+void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
+    dma_transfer_done_flag = 1;
+}
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,11 +59,6 @@ I2C_HandleTypeDef hi2c1;
 SPI_HandleTypeDef hspi5;
 
 /* USER CODE BEGIN PV */
-uint16_t frame_buffer[IMG_ROWS*IMG_COLUMNS];
-uint8_t image_data[IMG_ROWS*IMG_COLUMNS];
-uint8_t processed_image[IMG_ROWS*IMG_COLUMNS];
-uint16_t lcd_buffer[IMG_ROWS*IMG_COLUMNS];
-
 volatile FilterType selectedFilter = FILTER_LAPLACIAN;
 
 #if USE_FILTER_BUTTON
@@ -69,12 +74,19 @@ void Filter_Button_Init(void) {
     HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 }
 
+// Helper: Cycle through all filter modes
+void Cycle_Filter_Mode(void) {
+    if (selectedFilter == FILTER_NONE)
+        selectedFilter = FILTER_LAPLACIAN;
+    else if (selectedFilter == FILTER_LAPLACIAN)
+        selectedFilter = FILTER_GAUSSIAN;
+    else
+        selectedFilter = FILTER_NONE;
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if (GPIO_Pin == FILTER_BUTTON_PIN) {
-        if (selectedFilter == FILTER_LAPLACIAN)
-            selectedFilter = FILTER_GAUSSIAN;
-        else
-            selectedFilter = FILTER_LAPLACIAN;
+        Cycle_Filter_Mode();
     }
 }
 #endif
@@ -103,90 +115,49 @@ static void MX_I2C1_Init(void);
   */
 int main(void)
 {
-
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  //MX_GPIO_Init();
-  //MX_DMA_Init();
-  //MX_SPI5_Init();
-  //MX_DCMI_Init();
-  //MX_I2C1_Init();
-  /* USER CODE BEGIN 2 */
-  te_CAMERA_ERROR_CODES cam_error;
-  LCD_Open();
-  cam_error = Camera_Open();
-
-  if (cam_error != E_CAMERA_ERR_NONE) while(1);
-
+    HAL_Init();
+    SystemClock_Config();
+    te_CAMERA_ERROR_CODES cam_error;
+    LCD_Open();
+    cam_error = Camera_Open();
+    if (cam_error != E_CAMERA_ERR_NONE) while(1);
 #if USE_FILTER_BUTTON
     Filter_Button_Init();
 #endif
-  /* USER CODE END 2 */
+    LCD_Set_Rotation(SCREEN_HORIZONTAL_2);
+    while (1)
+    {
+        for (int row = 0; row < IMG_ROWS; row++) {
+            dma_transfer_done_flag = 0;
+            HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)line_buffer[row % 3], IMG_COLUMNS / 2);
+            while (!dma_transfer_done_flag);
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)frame_buffer, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK)
-  {
-	  Error_Handler();
-  }
-  LCD_Set_Rotation(SCREEN_HORIZONTAL_2);
-  while (1)
-  {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-//	  LCD_Fill_Screen(GREEN);
-//	  LCD_Fill_Screen(RED);
-	  HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)frame_buffer, IMG_ROWS*IMG_COLUMNS/2);
-	  // 1. RGB565 -> Grayscale
-	  for (int i = 0; i < IMG_ROWS * IMG_COLUMNS; i++) {
-		  uint16_t rgb = frame_buffer[i];
-		  uint8_t r = (rgb >> 11) & 0x1F;
-		  uint8_t g = (rgb >> 5) & 0x3F;
-		  uint8_t b = rgb & 0x1F;
-		  // Normalize to 8-bit and convert to grayscale
-		  image_data[i] = (uint8_t)(((r * 8) + (g * 4) + (b * 8)) / 3);
-	  }
-
-	  // 2. Apply filter
-#if USE_FILTER_BUTTON
-	  applyFilter(image_data, processed_image, selectedFilter);
-#else
-	  applyFilter(image_data, processed_image, FILTER_LAPLACIAN);
-#endif
-
-	  // 3. Grayscale -> RGB565 for LCD
-	  for (int i = 0; i < IMG_ROWS * IMG_COLUMNS; i++) {
-		  uint8_t gray = processed_image[i];
-		  uint16_t rgb565 = ((gray >> 3) << 11) | ((gray >> 2) << 5) | (gray >> 3);
-		  lcd_buffer[i] = rgb565;
-	  }
-
-	  // 4. Display on LCD
-	  LCD_Display_Image(lcd_buffer);
-	  //LCD_Fill_Screen(GREEN);
-	  //LCD_Fill_Screen(BLUE);
-  }
-  /* USER CODE END 3 */
+            if (selectedFilter == FILTER_NONE) {
+                memcpy(&processed_image[row * IMG_COLUMNS], line_buffer[row % 3], IMG_COLUMNS * sizeof(uint16_t));
+            } else if (row >= 2) {
+                int y = row - 1;
+                const int (*kernel)[3] = (selectedFilter == FILTER_LAPLACIAN) ? laplacian_kernel : gaussian_kernel;
+                int kernel_factor = (selectedFilter == FILTER_LAPLACIAN) ? 1 : gaussian_factor;
+                for (int x = 1; x < IMG_COLUMNS - 1; x++) {
+                    uint8_t window[3][3];
+                    for (int i = -1; i <= 1; i++) {
+                        for (int j = -1; j <= 1; j++) {
+                            uint16_t rgb = line_buffer[(row - 1 + i + 3) % 3][x + j];
+                            uint8_t r = (rgb >> 11) & 0x1F;
+                            uint8_t g = (rgb >> 5) & 0x3F;
+                            uint8_t b = rgb & 0x1F;
+                            window[i + 1][j + 1] = (r * 8 + g * 4 + b * 8) / 3;
+                        }
+                    }
+                    int result;
+                    applyKernel3x3_window(window, kernel, kernel_factor, &result);
+                    uint16_t rgb565 = ((result >> 3) << 11) | ((result >> 2) << 5) | (result >> 3);
+                    processed_image[y * IMG_COLUMNS + x] = rgb565;
+                }
+            }
+        }
+        LCD_Display_Image(processed_image);
+    }
 }
 
 /**
