@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "filter.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -49,6 +50,34 @@ SPI_HandleTypeDef hspi5;
 
 /* USER CODE BEGIN PV */
 uint16_t frame_buffer[IMG_ROWS*IMG_COLUMNS];
+uint8_t image_data[IMG_ROWS*IMG_COLUMNS];
+uint8_t processed_image[IMG_ROWS*IMG_COLUMNS];
+uint16_t lcd_buffer[IMG_ROWS*IMG_COLUMNS];
+
+volatile FilterType selectedFilter = FILTER_LAPLACIAN;
+
+#if USE_FILTER_BUTTON
+void Filter_Button_Init(void) {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    __HAL_RCC_GPIOA_CLK_ENABLE(); // Adjust if using a different port
+    GPIO_InitStruct.Pin = FILTER_BUTTON_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(FILTER_BUTTON_PORT, &GPIO_InitStruct);
+    // EXTI0_IRQn is for pin 0; change if using a different pin
+    HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == FILTER_BUTTON_PIN) {
+        if (selectedFilter == FILTER_LAPLACIAN)
+            selectedFilter = FILTER_GAUSSIAN;
+        else
+            selectedFilter = FILTER_LAPLACIAN;
+    }
+}
+#endif
 
 /* USER CODE END PV */
 
@@ -107,6 +136,10 @@ int main(void)
   cam_error = Camera_Open();
 
   if (cam_error != E_CAMERA_ERR_NONE) while(1);
+
+#if USE_FILTER_BUTTON
+    Filter_Button_Init();
+#endif
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -124,7 +157,32 @@ int main(void)
 //	  LCD_Fill_Screen(GREEN);
 //	  LCD_Fill_Screen(RED);
 	  HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)frame_buffer, IMG_ROWS*IMG_COLUMNS/2);
-	  LCD_Display_Image((uint16_t *) frame_buffer);
+	  // 1. RGB565 -> Grayscale
+	  for (int i = 0; i < IMG_ROWS * IMG_COLUMNS; i++) {
+		  uint16_t rgb = frame_buffer[i];
+		  uint8_t r = (rgb >> 11) & 0x1F;
+		  uint8_t g = (rgb >> 5) & 0x3F;
+		  uint8_t b = rgb & 0x1F;
+		  // Normalize to 8-bit and convert to grayscale
+		  image_data[i] = (uint8_t)(((r * 8) + (g * 4) + (b * 8)) / 3);
+	  }
+
+	  // 2. Apply filter
+#if USE_FILTER_BUTTON
+	  applyFilter(image_data, processed_image, selectedFilter);
+#else
+	  applyFilter(image_data, processed_image, FILTER_LAPLACIAN);
+#endif
+
+	  // 3. Grayscale -> RGB565 for LCD
+	  for (int i = 0; i < IMG_ROWS * IMG_COLUMNS; i++) {
+		  uint8_t gray = processed_image[i];
+		  uint16_t rgb565 = ((gray >> 3) << 11) | ((gray >> 2) << 5) | (gray >> 3);
+		  lcd_buffer[i] = rgb565;
+	  }
+
+	  // 4. Display on LCD
+	  LCD_Display_Image(lcd_buffer);
 	  //LCD_Fill_Screen(GREEN);
 	  //LCD_Fill_Screen(BLUE);
   }
