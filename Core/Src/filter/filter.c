@@ -13,7 +13,7 @@ const int gaussian_kernel[3][3] = {
 const int gaussian_factor = 16;
 
 void applyKernel3x3_window(uint8_t window[3][3], const int kernel[3][3], int kernel_factor, int *result) {
-    int sum = 0;
+    int32_t sum = 0;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             sum += window[i][j] * kernel[i][j];

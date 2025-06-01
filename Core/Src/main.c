@@ -121,10 +121,18 @@ int main(void)
     LCD_Open();
     cam_error = Camera_Open();
     if (cam_error != E_CAMERA_ERR_NONE) while(1);
+    uint32_t start = HAL_GetTick();
+    if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK) {
+      Error_Handler();
+    }
+    LCD_Set_Rotation(SCREEN_HORIZONTAL_2); // Sadece bir kez çağır
+    while (HAL_GetTick() - start < 10000) { // 10 saniye
+      HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2);
+      LCD_Display_Image((uint16_t *) processed_image);
+    }
 #if USE_FILTER_BUTTON
     Filter_Button_Init();
 #endif
-    LCD_Set_Rotation(SCREEN_HORIZONTAL_2);
     while (1)
     {
         for (int row = 0; row < IMG_ROWS; row++) {
@@ -146,17 +154,26 @@ int main(void)
                             uint8_t r = (rgb >> 11) & 0x1F;
                             uint8_t g = (rgb >> 5) & 0x3F;
                             uint8_t b = rgb & 0x1F;
-                            window[i + 1][j + 1] = (r * 8 + g * 4 + b * 8) / 3;
+                            uint8_t gray = (r * 299 + g * 587 + b * 114) / 1000;
+                            window[i + 1][j + 1] = gray;
                         }
                     }
                     int result;
                     applyKernel3x3_window(window, kernel, kernel_factor, &result);
-                    uint16_t rgb565 = ((result >> 3) << 11) | ((result >> 2) << 5) | (result >> 3);
+                    uint8_t r5 = (result * 31) / 255; // 5 bit
+                    uint8_t g6 = (result * 63) / 255; // 6 bit
+                    uint8_t b5 = (result * 31) / 255; // 5 bit
+                    uint16_t rgb565 = (r5 << 11) | (g6 << 5) | b5;
                     processed_image[y * IMG_COLUMNS + x] = rgb565;
+                }
+            } else {
+                // Satırı beyaz yap
+                for (int i = 0; i < IMG_COLUMNS; i++) {
+                    processed_image[row * IMG_COLUMNS + i] = 0xFFFF;
                 }
             }
         }
-        LCD_Display_Image(processed_image);
+        LCD_Display_Image((uint16_t *) processed_image);
     }
 }
 
