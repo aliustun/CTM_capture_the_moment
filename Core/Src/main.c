@@ -116,11 +116,12 @@ int main(void)
   if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK) {
     Error_Handler();
   }
+  __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
   LCD_Set_Rotation(SCREEN_HORIZONTAL_2); // Sadece bir kez çağır
-  while (HAL_GetTick() - start < 10000) { // 10 saniye
-    HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2);
-    LCD_Display_Image((uint16_t *) processed_image);
-  }
+  // while (HAL_GetTick() - start < 100000) { // 10 saniye
+  //   HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2);
+  //   LCD_Display_Image((uint16_t *) processed_image);
+  // }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -130,6 +131,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    // LCD_Display_Image((uint16_t *) processed_image);
   }
   /* USER CODE END 3 */
 }
@@ -393,6 +395,9 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_13, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -401,13 +406,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF0_MCO;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PG13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+	LCD_Display_Image((uint16_t *) processed_image);
+}
 /* USER CODE END 4 */
 
 /**
