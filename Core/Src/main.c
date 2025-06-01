@@ -21,7 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "filter.h"
+#include "lcd_drv.h"
+#include "camera_drv.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,7 +33,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
+uint16_t processed_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -87,7 +90,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  te_CAMERA_ERROR_CODES cam_error;
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -105,7 +108,19 @@ int main(void)
   MX_I2C1_Init();
   MX_FMC_Init();
   /* USER CODE BEGIN 2 */
+  LCD_Open();
+  cam_error = Camera_Open();
 
+  if (cam_error != E_CAMERA_ERR_NONE) while(1);
+  uint32_t start = HAL_GetTick();
+  if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK) {
+    Error_Handler();
+  }
+  LCD_Set_Rotation(SCREEN_HORIZONTAL_2); // Sadece bir kez çağır
+  while (HAL_GetTick() - start < 10000) { // 10 saniye
+    HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2);
+    LCD_Display_Image((uint16_t *) processed_image);
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
