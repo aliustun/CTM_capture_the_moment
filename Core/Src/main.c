@@ -39,6 +39,8 @@ uint16_t processed_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565
 extern DCMI_HandleTypeDef hdcmi;
 volatile uint8_t dma_transfer_done_flag = 0;
 
+#define DMA_TIMEOUT_MS 100
+
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
     dma_transfer_done_flag = 1;
 }
@@ -137,8 +139,24 @@ int main(void)
     {
         for (int row = 0; row < IMG_ROWS; row++) {
             dma_transfer_done_flag = 0;
-            HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)line_buffer[row % 3], IMG_COLUMNS / 2);
-            while (!dma_transfer_done_flag);
+            int dma_timeout = 0;
+            HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)line_buffer[row % 3], IMG_COLUMNS);
+
+            uint32_t dma_start = HAL_GetTick();
+            while (!dma_transfer_done_flag) {
+                if (HAL_GetTick() - dma_start > DMA_TIMEOUT_MS) {
+                    dma_timeout = 1;
+                    break;
+                }
+            }
+
+            if (dma_timeout) {
+                for (int i = 0; i < IMG_ROWS * IMG_COLUMNS; i++) {
+                    processed_image[i] = 0xF800; // Kırmızı
+                }
+                LCD_Display_Image((uint16_t *)processed_image);
+                while (1); // Hata durumunda sistem burada kalır
+            }
 
             if (selectedFilter == FILTER_NONE) {
                 memcpy(&processed_image[row * IMG_COLUMNS], line_buffer[row % 3], IMG_COLUMNS * sizeof(uint16_t));
