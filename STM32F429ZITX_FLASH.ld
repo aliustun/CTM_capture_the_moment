@@ -48,6 +48,7 @@ MEMORY
   CCMRAM    (xrw)    : ORIGIN = 0x10000000,   LENGTH = 64K
   RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 192K
   FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 2048K
+  SDRAM (xrw)     : ORIGIN = 0xC0000000, LENGTH = 8M
 }
 
 /* Sections */
@@ -205,4 +206,15 @@ SECTIONS
   }
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
+
+  /* SDRAM Added */
+  /* Custom section for SDRAM */
+  .sdram (NOLOAD) :
+  {
+    . = ALIGN(4);
+    *(.sdram)
+    *(.sdram*)
+    . = ALIGN(4);
+  } >SDRAM
+
 }
