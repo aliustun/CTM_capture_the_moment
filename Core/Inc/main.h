@@ -28,7 +28,6 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
-#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -60,10 +59,6 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
-
-#define USE_FILTER_BUTTON 1 // 1: Enable button, 0: Disable button
-#define FILTER_BUTTON_PIN GPIO_PIN_0
-#define FILTER_BUTTON_PORT GPIOA
 
 /* USER CODE END Private defines */
 

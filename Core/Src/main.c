@@ -18,32 +18,19 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "filter.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "lcd_drv.h"
-#include "camera_drv.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
-uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
-uint16_t processed_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
-
-extern DCMI_HandleTypeDef hdcmi;
-volatile uint8_t dma_transfer_done_flag = 0;
-
-#define DMA_TIMEOUT_MS 100
-
-void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
-    dma_transfer_done_flag = 1;
-}
 
 /* USER CODE END PD */
 
@@ -60,38 +47,9 @@ I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi5;
 
+SDRAM_HandleTypeDef hsdram1;
+
 /* USER CODE BEGIN PV */
-volatile FilterType selectedFilter = FILTER_LAPLACIAN;
-
-#if USE_FILTER_BUTTON
-void Filter_Button_Init(void) {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    __HAL_RCC_GPIOA_CLK_ENABLE(); // Adjust if using a different port
-    GPIO_InitStruct.Pin = FILTER_BUTTON_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(FILTER_BUTTON_PORT, &GPIO_InitStruct);
-    // EXTI0_IRQn is for pin 0; change if using a different pin
-    HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-}
-
-// Helper: Cycle through all filter modes
-void Cycle_Filter_Mode(void) {
-    if (selectedFilter == FILTER_NONE)
-        selectedFilter = FILTER_LAPLACIAN;
-    else if (selectedFilter == FILTER_LAPLACIAN)
-        selectedFilter = FILTER_GAUSSIAN;
-    else
-        selectedFilter = FILTER_NONE;
-}
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if (GPIO_Pin == FILTER_BUTTON_PIN) {
-        Cycle_Filter_Mode();
-    }
-}
-#endif
 
 /* USER CODE END PV */
 
@@ -102,6 +60,7 @@ static void MX_DMA_Init(void);
 static void MX_SPI5_Init(void);
 static void MX_DCMI_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_FMC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -117,82 +76,47 @@ static void MX_I2C1_Init(void);
   */
 int main(void)
 {
-    HAL_Init();
-    SystemClock_Config();
-    te_CAMERA_ERROR_CODES cam_error;
-    LCD_Open();
-    cam_error = Camera_Open();
-    if (cam_error != E_CAMERA_ERR_NONE) while(1);
-    uint32_t start = HAL_GetTick();
-    if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK) {
-      Error_Handler();
-    }
-    LCD_Set_Rotation(SCREEN_HORIZONTAL_2); // Sadece bir kez çağır
-    while (HAL_GetTick() - start < 10000) { // 10 saniye
-      HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2);
-      LCD_Display_Image((uint16_t *) processed_image);
-    }
-#if USE_FILTER_BUTTON
-    Filter_Button_Init();
-#endif
-    while (1)
-    {
-        for (int row = 0; row < IMG_ROWS; row++) {
-            dma_transfer_done_flag = 0;
-            int dma_timeout = 0;
-            HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)line_buffer[row % 3], IMG_COLUMNS);
 
-            uint32_t dma_start = HAL_GetTick();
-            while (!dma_transfer_done_flag) {
-                if (HAL_GetTick() - dma_start > DMA_TIMEOUT_MS) {
-                    dma_timeout = 1;
-                    break;
-                }
-            }
+  /* USER CODE BEGIN 1 */
 
-            if (dma_timeout) {
-                for (int i = 0; i < IMG_ROWS * IMG_COLUMNS; i++) {
-                    processed_image[i] = 0xF800; // Kırmızı
-                }
-                LCD_Display_Image((uint16_t *)processed_image);
-                while (1); // Hata durumunda sistem burada kalır
-            }
+  /* USER CODE END 1 */
 
-            if (selectedFilter == FILTER_NONE) {
-                memcpy(&processed_image[row * IMG_COLUMNS], line_buffer[row % 3], IMG_COLUMNS * sizeof(uint16_t));
-            } else if (row >= 2) {
-                int y = row - 1;
-                const int (*kernel)[3] = (selectedFilter == FILTER_LAPLACIAN) ? laplacian_kernel : gaussian_kernel;
-                int kernel_factor = (selectedFilter == FILTER_LAPLACIAN) ? 1 : gaussian_factor;
-                for (int x = 1; x < IMG_COLUMNS - 1; x++) {
-                    uint8_t window[3][3];
-                    for (int i = -1; i <= 1; i++) {
-                        for (int j = -1; j <= 1; j++) {
-                            uint16_t rgb = line_buffer[(row - 1 + i + 3) % 3][x + j];
-                            uint8_t r = (rgb >> 11) & 0x1F;
-                            uint8_t g = (rgb >> 5) & 0x3F;
-                            uint8_t b = rgb & 0x1F;
-                            uint8_t gray = (r * 299 + g * 587 + b * 114) / 1000;
-                            window[i + 1][j + 1] = gray;
-                        }
-                    }
-                    int result;
-                    applyKernel3x3_window(window, kernel, kernel_factor, &result);
-                    uint8_t r5 = (result * 31) / 255; // 5 bit
-                    uint8_t g6 = (result * 63) / 255; // 6 bit
-                    uint8_t b5 = (result * 31) / 255; // 5 bit
-                    uint16_t rgb565 = (r5 << 11) | (g6 << 5) | b5;
-                    processed_image[y * IMG_COLUMNS + x] = rgb565;
-                }
-            } else {
-                // Satırı beyaz yap
-                for (int i = 0; i < IMG_COLUMNS; i++) {
-                    processed_image[row * IMG_COLUMNS + i] = 0xFFFF;
-                }
-            }
-        }
-        LCD_Display_Image((uint16_t *) processed_image);
-    }
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_SPI5_Init();
+  MX_DCMI_Init();
+  MX_I2C1_Init();
+  MX_FMC_Init();
+  /* USER CODE BEGIN 2 */
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
 }
 
 /**
@@ -385,6 +309,53 @@ static void MX_DMA_Init(void)
 
 }
 
+/* FMC initialization function */
+static void MX_FMC_Init(void)
+{
+
+  /* USER CODE BEGIN FMC_Init 0 */
+
+  /* USER CODE END FMC_Init 0 */
+
+  FMC_SDRAM_TimingTypeDef SdramTiming = {0};
+
+  /* USER CODE BEGIN FMC_Init 1 */
+
+  /* USER CODE END FMC_Init 1 */
+
+  /** Perform the SDRAM1 memory initialization sequence
+  */
+  hsdram1.Instance = FMC_SDRAM_DEVICE;
+  /* hsdram1.Init */
+  hsdram1.Init.SDBank = FMC_SDRAM_BANK1;
+  hsdram1.Init.ColumnBitsNumber = FMC_SDRAM_COLUMN_BITS_NUM_8;
+  hsdram1.Init.RowBitsNumber = FMC_SDRAM_ROW_BITS_NUM_12;
+  hsdram1.Init.MemoryDataWidth = FMC_SDRAM_MEM_BUS_WIDTH_16;
+  hsdram1.Init.InternalBankNumber = FMC_SDRAM_INTERN_BANKS_NUM_4;
+  hsdram1.Init.CASLatency = FMC_SDRAM_CAS_LATENCY_3;
+  hsdram1.Init.WriteProtection = FMC_SDRAM_WRITE_PROTECTION_DISABLE;
+  hsdram1.Init.SDClockPeriod = FMC_SDRAM_CLOCK_PERIOD_2;
+  hsdram1.Init.ReadBurst = FMC_SDRAM_RBURST_DISABLE;
+  hsdram1.Init.ReadPipeDelay = FMC_SDRAM_RPIPE_DELAY_1;
+  /* SdramTiming */
+  SdramTiming.LoadToActiveDelay = 16;
+  SdramTiming.ExitSelfRefreshDelay = 16;
+  SdramTiming.SelfRefreshTime = 16;
+  SdramTiming.RowCycleDelay = 16;
+  SdramTiming.WriteRecoveryTime = 16;
+  SdramTiming.RPDelay = 16;
+  SdramTiming.RCDDelay = 16;
+
+  if (HAL_SDRAM_Init(&hsdram1, &SdramTiming) != HAL_OK)
+  {
+    Error_Handler( );
+  }
+
+  /* USER CODE BEGIN FMC_Init 2 */
+
+  /* USER CODE END FMC_Init 2 */
+}
+
 /**
   * @brief GPIO Initialization Function
   * @param None
@@ -401,8 +372,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOG_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin : PA8 */
