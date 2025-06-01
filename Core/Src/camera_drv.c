@@ -131,7 +131,7 @@ const uint8_t OV7670_reg [OV7670_REG_NUM][2] = {
 
 te_CAMERA_ERROR_CODES Camera_Open(void) {
 	te_CAMERA_ERROR_CODES error;
-	Camera_GPIO_Init();
+	// Camera_GPIO_Init();
 	if (error = Camera_I2C_Init() != E_CAMERA_ERR_NONE) return error;
 	if (error = Camera_DCMI_Init() != E_CAMERA_ERR_NONE) return error;
 	if (error = Camera_DMA_Init() != E_CAMERA_ERR_NONE) return error;
@@ -253,6 +253,9 @@ static void Camera_XCLK_Init() {
 }
 
 static te_CAMERA_ERROR_CODES Camera_DMA_Init(void) {
+	 /* DMA controller clock enable */
+	  __HAL_RCC_DMA2_CLK_ENABLE();
+
 	hdma_dcmi.Instance = DMA2_Stream1;
 	hdma_dcmi.Init.Channel = DMA_CHANNEL_1;
 	hdma_dcmi.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -260,7 +263,7 @@ static te_CAMERA_ERROR_CODES Camera_DMA_Init(void) {
 	hdma_dcmi.Init.MemInc = DMA_MINC_ENABLE;
 	hdma_dcmi.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
 	hdma_dcmi.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-	hdma_dcmi.Init.Mode = DMA_NORMAL;
+	hdma_dcmi.Init.Mode = DMA_CIRCULAR;
 	hdma_dcmi.Init.Priority = DMA_PRIORITY_HIGH;
 	hdma_dcmi.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
 	hdma_dcmi.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;

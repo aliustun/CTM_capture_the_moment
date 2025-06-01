@@ -1,0 +1,7 @@
+./.vscode
+./.settings
+./.metadata
+./.vscode
+Debug/
+CTM_capture_the_moment Debug.launch
+*.prefs
