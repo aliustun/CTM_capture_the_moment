@@ -29,7 +29,7 @@ te_CAMERA_ERROR_CODES Camera_Open(void);
 #define OV7670_WRITE_ADDR 	0x42
 
 // Image settings
-#define IMG_ROWS   			    160
+#define IMG_ROWS   			    320
 #define IMG_COLUMNS   			240
 
 
