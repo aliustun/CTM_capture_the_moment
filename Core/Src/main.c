@@ -37,7 +37,7 @@
 #define BUFFER_SIZE         ((uint32_t)0x0100)
 #define WRITE_READ_ADDR     ((uint32_t)0x0800)
 #define REFRESH_COUNT       ((uint32_t)0x056A)
-static FilterType filterType = FILTER_LAPLACIAN;
+static FilterType filterType = FILTER_NONE;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -75,6 +75,16 @@ const osThreadAttr_t FilterTask_attributes = {
   .name = "FilterTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for sem_frame_captured */
+osSemaphoreId_t sem_frame_capturedHandle;
+const osSemaphoreAttr_t sem_frame_captured_attributes = {
+  .name = "sem_frame_captured"
+};
+/* Definitions for sem_filter_done */
+osSemaphoreId_t sem_filter_doneHandle;
+const osSemaphoreAttr_t sem_filter_done_attributes = {
+  .name = "sem_filter_done"
 };
 /* USER CODE BEGIN PV */
 FMC_SDRAM_CommandTypeDef command;
@@ -163,6 +173,13 @@ int main(void)
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of sem_frame_captured */
+  sem_frame_capturedHandle = osSemaphoreNew(1, 0, &sem_frame_captured_attributes);
+
+  /* creation of sem_filter_done */
+  sem_filter_doneHandle = osSemaphoreNew(1, 0, &sem_filter_done_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -494,11 +511,16 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+//{
+//	applyFilterToImageFull(raw_image, filtered_image, filterType);
+//	LCD_Display_Image((uint16_t *) filtered_image);
+//}
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
-	applyFilterToImageFull(raw_image, filtered_image, filterType);
-	LCD_Display_Image((uint16_t *) filtered_image);
+  osSemaphoreRelease(sem_frame_capturedHandle);
 }
+
 
 static void SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_CommandTypeDef *Command)
 {
@@ -569,7 +591,9 @@ void StartCameraTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    osSemaphoreAcquire(sem_frame_capturedHandle, osWaitForever);
+    osThreadFlagsSet(FilterTaskHandle, 0x01);
+	osDelay(10); // kamera hızı kadar beklenebilir
   }
   /* USER CODE END 5 */
 }
@@ -587,7 +611,8 @@ void StartDisplayTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	osSemaphoreAcquire(sem_filter_doneHandle, osWaitForever);
+	LCD_Display_Image((uint16_t *) filtered_image);
   }
   /* USER CODE END StartDisplayTask */
 }
@@ -605,7 +630,9 @@ void StartFilterTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	osThreadFlagsWait(0x01, osFlagsWaitAny, osWaitForever);
+	applyFilterToImageFull(raw_image, filtered_image, filterType);
+	osSemaphoreRelease(sem_filter_doneHandle);
   }
   /* USER CODE END StartFilterTask */
 }
