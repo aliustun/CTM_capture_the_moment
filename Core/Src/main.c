@@ -37,6 +37,7 @@
 #define BUFFER_SIZE         ((uint32_t)0x0100)
 #define WRITE_READ_ADDR     ((uint32_t)0x0800)
 #define REFRESH_COUNT       ((uint32_t)0x056A)
+#define CHUNK_SIZE (IMG_COLUMNS * 3)  // Process 3 rows at a time
 static FilterType filterType = FILTER_NONE;
 /* USER CODE END PD */
 
@@ -90,7 +91,11 @@ const osSemaphoreAttr_t sem_filter_done_attributes = {
 FMC_SDRAM_CommandTypeDef command;
 uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
 uint16_t raw_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
-__attribute__((section(".sdram"))) uint16_t filtered_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
+// __attribute__((section(".sdram"))) uint16_t filtered_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
+// uint16_t chunk_buffer[CHUNK_SIZE];    // Buffer for processed chunk
+
+uint16_t chunk_buffer[CHUNK_SIZE];    // Buffer for input chunk
+uint16_t filtered_chunk[IMG_COLUMNS]; // Buffer for filtered output
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -611,8 +616,8 @@ void StartDisplayTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	osSemaphoreAcquire(sem_filter_doneHandle, osWaitForever);
-	LCD_Display_Image((uint16_t *) filtered_image);
+    osSemaphoreAcquire(sem_filter_doneHandle, osWaitForever);
+    // Display is now handled in chunks by FilterTask
   }
   /* USER CODE END StartDisplayTask */
 }
@@ -627,12 +632,28 @@ void StartDisplayTask(void *argument)
 void StartFilterTask(void *argument)
 {
   /* USER CODE BEGIN StartFilterTask */
+  uint32_t current_row = 0;
+  
   /* Infinite loop */
   for(;;)
   {
-	osThreadFlagsWait(0x01, osFlagsWaitAny, osWaitForever);
-	applyFilterToImageFull(raw_image, filtered_image, filterType);
-	osSemaphoreRelease(sem_filter_doneHandle);
+    osThreadFlagsWait(0x01, osFlagsWaitAny, osWaitForever);
+    
+    // Process image in chunks
+    for(current_row = 0; current_row < IMG_ROWS-2; current_row++) {
+      // Copy chunk from raw image
+      for(int i = 0; i < CHUNK_SIZE; i++) {
+        chunk_buffer[i] = raw_image[current_row * IMG_COLUMNS + i];
+      }
+      
+      // Apply filter to chunk and get filtered row
+      applyFilterToImage(chunk_buffer, filtered_chunk, filterType);
+      
+      // Display this filtered row
+      LCD_Display_New(filtered_chunk, current_row * IMG_COLUMNS, IMG_COLUMNS);
+    }
+    
+    osSemaphoreRelease(sem_filter_doneHandle);
   }
   /* USER CODE END StartFilterTask */
 }

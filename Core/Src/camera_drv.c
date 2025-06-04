@@ -132,11 +132,11 @@ const uint8_t OV7670_reg [OV7670_REG_NUM][2] = {
 te_CAMERA_ERROR_CODES Camera_Open(void) {
 	te_CAMERA_ERROR_CODES error;
 	// Camera_GPIO_Init();
-	if (error = Camera_I2C_Init() != E_CAMERA_ERR_NONE) return error;
-	if (error = Camera_DCMI_Init() != E_CAMERA_ERR_NONE) return error;
-	if (error = Camera_DMA_Init() != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_I2C_Init()) != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_DCMI_Init()) != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_DMA_Init()) != E_CAMERA_ERR_NONE) return error;
 	Camera_XCLK_Init();
-	if (error = Camera_Init() != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_Init()) != E_CAMERA_ERR_NONE) return error;
 	return E_CAMERA_ERR_NONE;
 }
 

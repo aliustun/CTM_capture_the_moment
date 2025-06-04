@@ -333,8 +333,29 @@ void LCD_Display_Image(uint16_t image[LCD_WIDTH*LCD_HEIGHT]) {
 	HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, GPIO_PIN_SET);
 }
 
+void LCD_Display_New(uint16_t *image, uint32_t start_index, uint32_t length) {
+    uint32_t n, i, j;
+    uint32_t x_start = (start_index % LCD_WIDTH);
+    uint32_t y_start = (start_index / LCD_WIDTH);
+    uint32_t x_end = ((start_index + length - 1) % LCD_WIDTH);
+    uint32_t y_end = ((start_index + length - 1) / LCD_WIDTH);
 
+    LCD_Set_Cursor_Position(x_start, x_end, y_start, y_end);
+    LCD_Write_Command(LCD_GRAM);
 
+    HAL_GPIO_WritePin(LCD_WR_PORT, LCD_WR_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, GPIO_PIN_RESET);
+
+    for (n = 0; n < length; n++) {
+        i = image[n] >> 8;
+        j = image[n] & 0xFF;
+
+        LCD_SPI_Send(i);
+        LCD_SPI_Send(j);
+    }
+
+    HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, GPIO_PIN_SET);
+}
 
 void LCD_Set_Rotation(uint8_t rotation) {
 

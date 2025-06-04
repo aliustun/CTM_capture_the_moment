@@ -24,7 +24,8 @@ void LCD_Fill_Screen(uint16_t color);
 void LCD_Display_Image(uint16_t image[LCD_WIDTH * LCD_HEIGHT]);
 void LCD_Set_Rotation(uint8_t rotation);
 
-
+// New function to display image in parts
+void LCD_Display_New(uint16_t *image, uint32_t start_index, uint32_t length);
 
 // SPI LCD Commands
 #define LCD_RESET			0x01
