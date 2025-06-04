@@ -38,6 +38,7 @@
 #define WRITE_READ_ADDR     ((uint32_t)0x0800)
 #define REFRESH_COUNT       ((uint32_t)0x056A)
 static FilterType filterType = FILTER_NONE;
+static void Fill_Buffer(uint32_t *pBuffer, uint32_t uwBufferLenght, uint32_t uwOffset);
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -88,9 +89,22 @@ const osSemaphoreAttr_t sem_filter_done_attributes = {
 };
 /* USER CODE BEGIN PV */
 FMC_SDRAM_CommandTypeDef command;
+/* SDRAM Test  */
+/* Read/Write Buffers */
+uint32_t aTxBuffer[BUFFER_SIZE];
+uint32_t aRxBuffer[BUFFER_SIZE];
+
+/* Status variables */
+__IO uint32_t uwWriteReadStatus = 0;
+
+/* Counter index */
+uint32_t uwIndex = 0;
+
+/*Camera Variables */
 uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
 uint16_t raw_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
 __attribute__((section(".sdram"))) uint16_t filtered_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -149,22 +163,62 @@ int main(void)
   MX_I2C1_Init();
   MX_FMC_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
   LCD_Open();
   cam_error = Camera_Open();
 
   if (cam_error != E_CAMERA_ERR_NONE) while(1);
-//  uint32_t start = HAL_GetTick();
+
   if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)raw_image, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK) {
     Error_Handler();
   }
+  HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+
   __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
   LCD_Set_Rotation(SCREEN_HORIZONTAL_2); // Sadece bir kez çağır
-  // while (HAL_GetTick() - start < 100000) { // 10 saniye
-  //   HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2);
-  //   LCD_Display_Image((uint16_t *) processed_image);
-  // }
+
   /* Program the SDRAM external device */
     SDRAM_Initialization_Sequence(&hsdram1, &command);
+
+    /* Fill the buffer to write */
+      Fill_Buffer(aTxBuffer, BUFFER_SIZE, 0xA244250F);
+
+      /* Write data to the SDRAM memory */
+      for (uwIndex = 0; uwIndex < BUFFER_SIZE; uwIndex++)
+      {
+        *(__IO uint32_t*) (SDRAM_BANK_ADDR + WRITE_READ_ADDR + 4*uwIndex) = aTxBuffer[uwIndex];
+      }
+
+      /* Read back data from the SDRAM memory */
+      for (uwIndex = 0; uwIndex < BUFFER_SIZE; uwIndex++)
+      {
+        aRxBuffer[uwIndex] = *(__IO uint32_t*) (SDRAM_BANK_ADDR + WRITE_READ_ADDR + 4*uwIndex);
+       }
+
+      /*##-3- Checking data integrity ############################################*/
+
+        for (uwIndex = 0; (uwIndex < BUFFER_SIZE) && (uwWriteReadStatus == 0); uwIndex++)
+        {
+          if (aRxBuffer[uwIndex] != aTxBuffer[uwIndex])
+          {
+            uwWriteReadStatus++;
+          }
+        }
+
+        if (uwWriteReadStatus)
+        {
+          /* KO */
+          /* Turn on LED4 */
+        	HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+        }
+        else
+        {
+          /* OK */
+          /* Turn on LED3 */
+        	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+        }
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -176,10 +230,10 @@ int main(void)
 
   /* Create the semaphores(s) */
   /* creation of sem_frame_captured */
-  sem_frame_capturedHandle = osSemaphoreNew(1, 0, &sem_frame_captured_attributes);
+  sem_frame_capturedHandle = osSemaphoreNew(1, 1, &sem_frame_captured_attributes);
 
   /* creation of sem_filter_done */
-  sem_filter_doneHandle = osSemaphoreNew(1, 0, &sem_filter_done_attributes);
+  sem_filter_doneHandle = osSemaphoreNew(1, 1, &sem_filter_done_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -436,14 +490,14 @@ static void MX_FMC_Init(void)
   */
   hsdram1.Instance = FMC_SDRAM_DEVICE;
   /* hsdram1.Init */
-  hsdram1.Init.SDBank = FMC_SDRAM_BANK1;
+  hsdram1.Init.SDBank = FMC_SDRAM_BANK2;
   hsdram1.Init.ColumnBitsNumber = FMC_SDRAM_COLUMN_BITS_NUM_8;
   hsdram1.Init.RowBitsNumber = FMC_SDRAM_ROW_BITS_NUM_12;
   hsdram1.Init.MemoryDataWidth = FMC_SDRAM_MEM_BUS_WIDTH_16;
   hsdram1.Init.InternalBankNumber = FMC_SDRAM_INTERN_BANKS_NUM_4;
   hsdram1.Init.CASLatency = FMC_SDRAM_CAS_LATENCY_3;
   hsdram1.Init.WriteProtection = FMC_SDRAM_WRITE_PROTECTION_DISABLE;
-  hsdram1.Init.SDClockPeriod = FMC_SDRAM_CLOCK_PERIOD_2;
+  hsdram1.Init.SDClockPeriod = FMC_SDRAM_CLOCK_PERIOD_3;
   hsdram1.Init.ReadBurst = FMC_SDRAM_RBURST_DISABLE;
   hsdram1.Init.ReadPipeDelay = FMC_SDRAM_RPIPE_DELAY_1;
   /* SdramTiming */
@@ -488,7 +542,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_13, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOG, LED3_Pin|LED4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
@@ -498,8 +552,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF0_MCO;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PG13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  /*Configure GPIO pins : LED3_Pin LED4_Pin */
+  GPIO_InitStruct.Pin = LED3_Pin|LED4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -576,6 +630,16 @@ static void SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM
   HAL_SDRAM_ProgramRefreshRate(hsdram, REFRESH_COUNT);
 }
 
+static void Fill_Buffer(uint32_t *pBuffer, uint32_t uwBufferLenght, uint32_t uwOffset)
+{
+  uint32_t tmpIndex = 0;
+
+  /* Put in global buffer different values */
+  for (tmpIndex = 0; tmpIndex < uwBufferLenght; tmpIndex++ )
+  {
+    pBuffer[tmpIndex] = tmpIndex + uwOffset;
+  }
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartCameraTask */
@@ -644,6 +708,7 @@ void StartFilterTask(void *argument)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
