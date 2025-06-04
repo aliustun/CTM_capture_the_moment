@@ -45,21 +45,34 @@ void applyFilterToImage(uint16_t *input_image, uint16_t *output_image, FilterTyp
         // Extract 3x3 window for RGB components
         for (int wy = 0; wy < 3; wy++) {
             for (int wx = 0; wx < 3; wx++) {
-                int pixel = input_image[(wy * IMG_COLUMNS) + (x - 1 + wx)];
-                window[wy][wx] = (uint8_t)((pixel >> 8) & 0xFF); // Get red component
+                uint16_t rgb = input_image[(wy * IMG_COLUMNS) + (x - 1 + wx)];
+                uint8_t r = (rgb >> 11) & 0x1F;
+                uint8_t g = (rgb >> 5) & 0x3F;
+                uint8_t b = rgb & 0x1F;
+                // Convert to grayscale
+                window[wy][wx] = (r * 299 + g * 587 + b * 114) / 1000;
             }
         }
         
         // Apply kernel
         if (filter_type == FILTER_LAPLACIAN) {
             applyKernel3x3_window(window, laplacian_kernel, 1, &result);
+            // For Laplacian, just use black and white
+            result = (result < 128) ? 0 : 0xFFFF;  // Full black or full white
+            output_image[x] = result;
         } else {
             applyKernel3x3_window(window, gaussian_kernel, 16, &result);
+            // For Gaussian, convert back to RGB565
+            uint8_t r5 = (result * 31) / 255;  // 5 bit
+            uint8_t g6 = (result * 63) / 255;  // 6 bit
+            uint8_t b5 = (result * 31) / 255;  // 5 bit
+            output_image[x] = (r5 << 11) | (g6 << 5) | b5;
         }
-        
-        // Store result
-        output_image[x] = ((result & 0xFF) << 8) | (result & 0xFF);
     }
+
+    // Handle edge pixels
+    output_image[0] = input_image[IMG_COLUMNS];  // First pixel
+    output_image[IMG_COLUMNS-1] = input_image[IMG_COLUMNS * 2 - 1];  // Last pixel
 }
 
 void applyFilterToImageFull(uint16_t *input_image, uint16_t *output_image, FilterType filter_type) {

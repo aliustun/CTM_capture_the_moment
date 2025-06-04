@@ -634,6 +634,7 @@ void StartFilterTask(void *argument)
 {
   /* USER CODE BEGIN StartFilterTask */
   uint32_t current_row = 0;
+  uint32_t display_row = 0;
   
   /* Infinite loop */
   for(;;)
@@ -642,16 +643,19 @@ void StartFilterTask(void *argument)
     
     // Process image in chunks
     for(current_row = 0; current_row < IMG_ROWS-2; current_row++) {
-      // Copy chunk from raw image
+      // Copy chunk from raw image (3 rows)
       for(int i = 0; i < CHUNK_SIZE; i++) {
         chunk_buffer[i] = raw_image[current_row * IMG_COLUMNS + i];
       }
       
-      // Apply filter to chunk and get filtered row
+      // Apply filter to chunk and get filtered row (middle row)
       applyFilterToImage(chunk_buffer, filtered_chunk, filterType);
       
-      // Display this filtered row
-      LCD_Display_New(filtered_chunk, current_row * IMG_COLUMNS, IMG_COLUMNS);
+      // Calculate correct display row (middle row of the chunk)
+      display_row = current_row + 1; // Since we process middle row
+      
+      // Display this filtered row at correct position
+      LCD_Display_New(filtered_chunk, display_row * IMG_COLUMNS, IMG_COLUMNS);
     }
     
     osSemaphoreRelease(sem_filter_doneHandle);

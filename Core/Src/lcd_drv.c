@@ -248,8 +248,9 @@ static te_LCD_ERROR_CODES LCD_Init(void) {
 }
 
 void LCD_SPI_Send(unsigned char data) {
-	HAL_StatusTypeDef status;
-	status = HAL_SPI_Transmit(&hspi5, &data, 1, 1);
+//	HAL_StatusTypeDef status;
+//	status = HAL_SPI_Transmit(&hspi5, &data, 1, 1);
+	HAL_SPI_Transmit(&hspi5, &data, 1, 1);
 }
 
 void LCD_Write_Command(uint8_t command) {
