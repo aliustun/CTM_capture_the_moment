@@ -622,6 +622,7 @@ void StartDisplayTask(void *argument)
   /* USER CODE END StartDisplayTask */
 }
 
+
 /* USER CODE BEGIN Header_StartFilterTask */
 /**
 * @brief Function implementing the FilterTask thread.
