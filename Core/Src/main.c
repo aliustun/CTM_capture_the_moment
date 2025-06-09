@@ -505,7 +505,7 @@ static void MX_FMC_Init(void)
   SdramTiming.ExitSelfRefreshDelay = 7;
   SdramTiming.SelfRefreshTime = 4;
   SdramTiming.RowCycleDelay = 7;
-  SdramTiming.WriteRecoveryTime = 3;
+  SdramTiming.WriteRecoveryTime = 2;
   SdramTiming.RPDelay = 2;
   SdramTiming.RCDDelay = 2;
 
@@ -676,7 +676,7 @@ void StartDisplayTask(void *argument)
   for(;;)
   {
 	osSemaphoreAcquire(sem_filter_doneHandle, osWaitForever);
-	LCD_Display_Image((uint16_t *) filtered_image);
+	LCD_Display_Image((uint16_t *) raw_image);
   }
   /* USER CODE END StartDisplayTask */
 }
