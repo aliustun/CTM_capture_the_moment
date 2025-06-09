@@ -132,11 +132,11 @@ const uint8_t OV7670_reg [OV7670_REG_NUM][2] = {
 te_CAMERA_ERROR_CODES Camera_Open(void) {
 	te_CAMERA_ERROR_CODES error;
 	// Camera_GPIO_Init();
-	if (error = Camera_I2C_Init() != E_CAMERA_ERR_NONE) return error;
-	if (error = Camera_DCMI_Init() != E_CAMERA_ERR_NONE) return error;
-	if (error = Camera_DMA_Init() != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_I2C_Init()) != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_DCMI_Init()) != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_DMA_Init()) != E_CAMERA_ERR_NONE) return error;
 	Camera_XCLK_Init();
-	if (error = Camera_Init() != E_CAMERA_ERR_NONE) return error;
+	if ((error = Camera_Init()) != E_CAMERA_ERR_NONE) return error;
 	return E_CAMERA_ERR_NONE;
 }
 
@@ -148,8 +148,10 @@ void Camera_Delay (volatile uint16_t nCount){
 static te_CAMERA_ERROR_CODES Camera_Init(void) {
 	uint8_t data, i = 0;
 	bool err;
-	LCD_Fill_Screen(PURPLE);
-	LCD_Set_Rotation(SCREEN_HORIZONTAL_1);
+	uint16_t color = PURPLE;
+	uint8_t rotation = SCREEN_HORIZONTAL_2;
+	LCD_Ioctl(E_LCD_IOCTL_FILL_SCREEN, &color);
+	LCD_Ioctl(E_LCD_IOCTL_SET_ROTATION, &rotation);
 	// Configure camera registers
 	for(i=0; i<OV7670_REG_NUM ;i++){
 		data = OV7670_reg[i][1];
