@@ -15,7 +15,7 @@
 | PA8          | XCLK      |
 | PE6	         | D7        |
 | PE5          | D6        |	
-|	PB6          | D5        |
+|	PD3          | D5        |
 | PE4          | D4        |
 | PC9          | D3        |
 | PC8          | D2        |
@@ -30,5 +30,49 @@
 | PB9          | SDA       |
 
 
+### SDRAM[^3] Wiring
+
+| **uC Board** | **IS42S16400J**| 
+|--------------|-----------|
+| PB6          | SDNE1     |
+| PB5          | SDCKE1    |	
+| PC0          | SDNWE     |	
+| PD15         | D1        |
+| PD14         | D0        |
+| PD10         | D15       |
+| PD9          | D14       |
+| PD8          | D13       |
+| PD1          | D3        |
+| PD0	         | D2        |
+| PE15         | D12       |
+| PE14         | D11       |
+| PE13         | D10       |
+| PE12         | D9        |
+| PE11         | D8        |
+| PE10         | D7        |
+| PE9          | D6        |
+| PE8          | D5        |
+| PE7          | D4        |
+| PE1          | NBL1      |
+| PE0          | NBL0      |
+| PF15         | A9        |
+| PF14         | A8        |
+| PF13         | A7        |
+| PF12         | A6        |
+| PF11         | SDNRAS    |
+| PF5          | A5        |
+| PF4          | A4        |
+| PF3          | A3        |
+| PF2          | A2        |
+| PF1          | A1        |
+| PF0          | A0        |
+| PG15         | SDNCAS    |
+| PG8          | SDCLK     |	
+|	PG5          | BA1       |
+| PG4          | BA0       |
+| PG1          | A11       |
+| PG0          | A10       |
+
 [^1]: Digital Camera Interface
 [^2]: Serial Camera Control Bus
+[^3]: Synchronous Dynamic Random Address Memory

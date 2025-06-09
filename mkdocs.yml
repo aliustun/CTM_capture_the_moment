@@ -1,0 +1,26 @@
+site_name: Capture the Moment
+site_url: https://aliustun.github.io/CTM_capture_the_moment/
+repo_url: https://github.com/aliustun/CTM_capture_the_moment
+repo_name: CTM_capture_the_moment
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+
+nav:
+  - Home: index.md
+  - Hardware: Hardware.md
+  - Software: Software.md
+  - Details: Details.md
+

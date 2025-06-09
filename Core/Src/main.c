@@ -34,8 +34,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
-uint16_t processed_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
+#define BUFFER_SIZE         ((uint32_t)0x0100)
+#define WRITE_READ_ADDR     ((uint32_t)0x0800)
+#define REFRESH_COUNT       ((uint32_t)0x056A)
+static FilterType filterType = FILTER_NONE;
+static void Fill_Buffer(uint32_t *pBuffer, uint32_t uwBufferLenght, uint32_t uwOffset);
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,7 +70,40 @@ const osThreadAttr_t DisplayTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for FilterTask */
+osThreadId_t FilterTaskHandle;
+const osThreadAttr_t FilterTask_attributes = {
+  .name = "FilterTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for sem_frame_captured */
+osSemaphoreId_t sem_frame_capturedHandle;
+const osSemaphoreAttr_t sem_frame_captured_attributes = {
+  .name = "sem_frame_captured"
+};
+/* Definitions for sem_filter_done */
+osSemaphoreId_t sem_filter_doneHandle;
+const osSemaphoreAttr_t sem_filter_done_attributes = {
+  .name = "sem_filter_done"
+};
 /* USER CODE BEGIN PV */
+FMC_SDRAM_CommandTypeDef command;
+/* SDRAM Test  */
+/* Read/Write Buffers */
+uint32_t aTxBuffer[BUFFER_SIZE];
+uint32_t aRxBuffer[BUFFER_SIZE];
+
+/* Status variables */
+__IO uint32_t uwWriteReadStatus = 0;
+
+/* Counter index */
+uint32_t uwIndex = 0;
+
+/*Camera Variables */
+uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
+uint16_t raw_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
+__attribute__((section(".sdram"))) uint16_t filtered_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
 
 /* USER CODE END PV */
 
@@ -79,11 +115,12 @@ static void MX_SPI5_Init(void);
 static void MX_DCMI_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_FMC_Init(void);
-void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
+void StartCameraTask(void *argument);
+void StartDisplayTask(void *argument);
+void StartFilterTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+static void SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_CommandTypeDef *Command);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -126,20 +163,62 @@ int main(void)
   MX_I2C1_Init();
   MX_FMC_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
   LCD_Open();
   cam_error = Camera_Open();
 
   if (cam_error != E_CAMERA_ERR_NONE) while(1);
-  uint32_t start = HAL_GetTick();
-  if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK) {
+
+  if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_CONTINUOUS, (uint32_t)raw_image, IMG_ROWS*IMG_COLUMNS/2) != HAL_OK) {
     Error_Handler();
   }
+  HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+
   __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
   LCD_Set_Rotation(SCREEN_HORIZONTAL_2); // Sadece bir kez çağır
-  // while (HAL_GetTick() - start < 100000) { // 10 saniye
-  //   HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)processed_image, IMG_ROWS*IMG_COLUMNS/2);
-  //   LCD_Display_Image((uint16_t *) processed_image);
-  // }
+
+  /* Program the SDRAM external device */
+    SDRAM_Initialization_Sequence(&hsdram1, &command);
+
+    /* Fill the buffer to write */
+      Fill_Buffer(aTxBuffer, BUFFER_SIZE, 0xA244250F);
+
+      /* Write data to the SDRAM memory */
+      for (uwIndex = 0; uwIndex < BUFFER_SIZE; uwIndex++)
+      {
+        *(__IO uint32_t*) (SDRAM_BANK_ADDR + WRITE_READ_ADDR + 4*uwIndex) = aTxBuffer[uwIndex];
+      }
+
+      /* Read back data from the SDRAM memory */
+      for (uwIndex = 0; uwIndex < BUFFER_SIZE; uwIndex++)
+      {
+        aRxBuffer[uwIndex] = *(__IO uint32_t*) (SDRAM_BANK_ADDR + WRITE_READ_ADDR + 4*uwIndex);
+       }
+
+      /*##-3- Checking data integrity ############################################*/
+
+        for (uwIndex = 0; (uwIndex < BUFFER_SIZE) && (uwWriteReadStatus == 0); uwIndex++)
+        {
+          if (aRxBuffer[uwIndex] != aTxBuffer[uwIndex])
+          {
+            uwWriteReadStatus++;
+          }
+        }
+
+        if (uwWriteReadStatus)
+        {
+          /* KO */
+          /* Turn on LED4 */
+        	HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+        }
+        else
+        {
+          /* OK */
+          /* Turn on LED3 */
+        	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+        }
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -148,6 +227,13 @@ int main(void)
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of sem_frame_captured */
+  sem_frame_capturedHandle = osSemaphoreNew(1, 1, &sem_frame_captured_attributes);
+
+  /* creation of sem_filter_done */
+  sem_filter_doneHandle = osSemaphoreNew(1, 1, &sem_filter_done_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -163,10 +249,13 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of CameraTask */
-  CameraTaskHandle = osThreadNew(StartDefaultTask, NULL, &CameraTask_attributes);
+  CameraTaskHandle = osThreadNew(StartCameraTask, NULL, &CameraTask_attributes);
 
   /* creation of DisplayTask */
-  DisplayTaskHandle = osThreadNew(StartTask02, NULL, &DisplayTask_attributes);
+  DisplayTaskHandle = osThreadNew(StartDisplayTask, NULL, &DisplayTask_attributes);
+
+  /* creation of FilterTask */
+  FilterTaskHandle = osThreadNew(StartFilterTask, NULL, &FilterTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -401,24 +490,24 @@ static void MX_FMC_Init(void)
   */
   hsdram1.Instance = FMC_SDRAM_DEVICE;
   /* hsdram1.Init */
-  hsdram1.Init.SDBank = FMC_SDRAM_BANK1;
+  hsdram1.Init.SDBank = FMC_SDRAM_BANK2;
   hsdram1.Init.ColumnBitsNumber = FMC_SDRAM_COLUMN_BITS_NUM_8;
   hsdram1.Init.RowBitsNumber = FMC_SDRAM_ROW_BITS_NUM_12;
   hsdram1.Init.MemoryDataWidth = FMC_SDRAM_MEM_BUS_WIDTH_16;
   hsdram1.Init.InternalBankNumber = FMC_SDRAM_INTERN_BANKS_NUM_4;
   hsdram1.Init.CASLatency = FMC_SDRAM_CAS_LATENCY_3;
   hsdram1.Init.WriteProtection = FMC_SDRAM_WRITE_PROTECTION_DISABLE;
-  hsdram1.Init.SDClockPeriod = FMC_SDRAM_CLOCK_PERIOD_2;
+  hsdram1.Init.SDClockPeriod = FMC_SDRAM_CLOCK_PERIOD_3;
   hsdram1.Init.ReadBurst = FMC_SDRAM_RBURST_DISABLE;
   hsdram1.Init.ReadPipeDelay = FMC_SDRAM_RPIPE_DELAY_1;
   /* SdramTiming */
-  SdramTiming.LoadToActiveDelay = 16;
-  SdramTiming.ExitSelfRefreshDelay = 16;
-  SdramTiming.SelfRefreshTime = 16;
-  SdramTiming.RowCycleDelay = 16;
-  SdramTiming.WriteRecoveryTime = 16;
-  SdramTiming.RPDelay = 16;
-  SdramTiming.RCDDelay = 16;
+  SdramTiming.LoadToActiveDelay = 2;
+  SdramTiming.ExitSelfRefreshDelay = 7;
+  SdramTiming.SelfRefreshTime = 4;
+  SdramTiming.RowCycleDelay = 7;
+  SdramTiming.WriteRecoveryTime = 3;
+  SdramTiming.RPDelay = 2;
+  SdramTiming.RCDDelay = 2;
 
   if (HAL_SDRAM_Init(&hsdram1, &SdramTiming) != HAL_OK)
   {
@@ -426,6 +515,18 @@ static void MX_FMC_Init(void)
   }
 
   /* USER CODE BEGIN FMC_Init 2 */
+  static GPIO_TypeDef * const GPIOInitTable[] = {
+    GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOG, GPIOG,
+    GPIOD, GPIOD, GPIOD, GPIOD, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOD,   GPIOD, GPIOD,
+    GPIOB, GPIOB, GPIOC, GPIOE, GPIOE, GPIOF, GPIOG, GPIOG, GPIOG, GPIOG,
+    0};
+
+  static uint8_t const PINInitTable[] = {
+    0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 0, 1,
+    14, 15, 0, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 8,
+    9, 10,
+    5, 6, 0, 0, 1, 11, 4, 5, 8, 15,
+    0};
 
   /* USER CODE END FMC_Init 2 */
 }
@@ -453,7 +554,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_13, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOG, LED3_Pin|LED4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
@@ -463,59 +564,421 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF0_MCO;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PG13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  /*Configure GPIO pins : LED3_Pin LED4_Pin */
+  GPIO_InitStruct.Pin = LED3_Pin|LED4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+  // FMC_D0 - PD14
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
+  // FMC_D1 - PD15
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  // FMC_D2 - PD0
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  // FMC_D3 - PD1
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  // FMC_D4 - PE7
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D5 - PE8
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D6 - PE9
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D7 - PE10
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D8 - PE11
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D9 - PE12
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D10 - PE13
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D11 - PE14
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D12 - PE15
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // FMC_D13 - PD8
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  // FMC_D14 - PD9
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  // FMC_D15 - PD10
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  // FMC_A0 - PF0
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // FMC_A1 - PF1
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // FMC_A2 - PF2
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // FMC_A3 - PF3
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // FMC_A4 - PF4
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // FMC_A5 - PF5
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // FMC_A10 - PG0
+  __HAL_RCC_GPIOG_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  // FMC_A11 - PG1
+  __HAL_RCC_GPIOG_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  // FMC_SDNE1 - PC2
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  // FMC_SDCKE1 - PC3
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  // FMC_SDCLK - PG8
+  __HAL_RCC_GPIOG_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  // FMC_SDNCAS - PG15
+  __HAL_RCC_GPIOG_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  // FMC_SDNRAS - PF11
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // FMC_SDNWE - PD5
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+//void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+//{
+//	applyFilterToImageFull(raw_image, filtered_image, filterType);
+//	LCD_Display_Image((uint16_t *) filtered_image);
+//}
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
-	LCD_Display_Image((uint16_t *) processed_image);
+  osSemaphoreRelease(sem_frame_capturedHandle);
+}
+
+
+static void SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_CommandTypeDef *Command)
+{
+  __IO uint32_t tmpmrd =0;
+  /* Step 3:  Configure a clock configuration enable command */
+  Command->CommandMode 			 = FMC_SDRAM_CMD_CLK_ENABLE;
+  Command->CommandTarget 		 = FMC_SDRAM_CMD_TARGET_BANK2;
+  Command->AutoRefreshNumber 	 = 1;
+  Command->ModeRegisterDefinition = 0;
+
+  /* Send the command */
+  HAL_SDRAM_SendCommand(hsdram, Command, 0x1000);
+
+  /* Step 4: Insert 100 ms delay */
+  HAL_Delay(100);
+
+  /* Step 5: Configure a PALL (precharge all) command */
+  Command->CommandMode 			 = FMC_SDRAM_CMD_PALL;
+  Command->CommandTarget 	     = FMC_SDRAM_CMD_TARGET_BANK2;
+  Command->AutoRefreshNumber 	 = 1;
+  Command->ModeRegisterDefinition = 0;
+
+  /* Send the command */
+  HAL_SDRAM_SendCommand(hsdram, Command, 0x1000);
+
+  /* Step 6 : Configure a Auto-Refresh command */
+  Command->CommandMode 			 = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
+  Command->CommandTarget 		 = FMC_SDRAM_CMD_TARGET_BANK2;
+  Command->AutoRefreshNumber 	 = 4;
+  Command->ModeRegisterDefinition = 0;
+
+  /* Send the command */
+  HAL_SDRAM_SendCommand(hsdram, Command, 0x1000);
+
+  /* Step 7: Program the external memory mode register */
+  tmpmrd = (uint32_t)SDRAM_MODEREG_BURST_LENGTH_2          |
+                     SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL   |
+                     SDRAM_MODEREG_CAS_LATENCY_3           |
+                     SDRAM_MODEREG_OPERATING_MODE_STANDARD |
+                     SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;
+
+  Command->CommandMode = FMC_SDRAM_CMD_LOAD_MODE;
+  Command->CommandTarget 		 = FMC_SDRAM_CMD_TARGET_BANK2;
+  Command->AutoRefreshNumber 	 = 1;
+  Command->ModeRegisterDefinition = tmpmrd;
+
+  /* Send the command */
+  HAL_SDRAM_SendCommand(hsdram, Command, 0x1000);
+
+  /* Step 8: Set the refresh rate counter */
+  /* (15.62 us x Freq) - 20 */
+  /* Set the device refresh counter */
+  HAL_SDRAM_ProgramRefreshRate(hsdram, REFRESH_COUNT);
+}
+
+static void Fill_Buffer(uint32_t *pBuffer, uint32_t uwBufferLenght, uint32_t uwOffset)
+{
+  uint32_t tmpIndex = 0;
+
+  /* Put in global buffer different values */
+  for (tmpIndex = 0; tmpIndex < uwBufferLenght; tmpIndex++ )
+  {
+    pBuffer[tmpIndex] = tmpIndex + uwOffset;
+  }
 }
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartCameraTask */
 /**
   * @brief  Function implementing the CameraTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartCameraTask */
+void StartCameraTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    osSemaphoreAcquire(sem_frame_capturedHandle, osWaitForever);
+    osThreadFlagsSet(FilterTaskHandle, 0x01);
+	osDelay(10); // kamera hızı kadar beklenebilir
   }
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
+/* USER CODE BEGIN Header_StartDisplayTask */
 /**
 * @brief Function implementing the DisplayTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
+/* USER CODE END Header_StartDisplayTask */
+void StartDisplayTask(void *argument)
 {
-  /* USER CODE BEGIN StartTask02 */
+  /* USER CODE BEGIN StartDisplayTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	osSemaphoreAcquire(sem_filter_doneHandle, osWaitForever);
+	LCD_Display_Image((uint16_t *) filtered_image);
   }
-  /* USER CODE END StartTask02 */
+  /* USER CODE END StartDisplayTask */
+}
+
+/* USER CODE BEGIN Header_StartFilterTask */
+/**
+* @brief Function implementing the FilterTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartFilterTask */
+void StartFilterTask(void *argument)
+{
+  /* USER CODE BEGIN StartFilterTask */
+  /* Infinite loop */
+  for(;;)
+  {
+	osThreadFlagsWait(0x01, osFlagsWaitAny, osWaitForever);
+	applyFilterToImageFull(raw_image, filtered_image, filterType);
+	osSemaphoreRelease(sem_filter_doneHandle);
+  }
+  /* USER CODE END StartFilterTask */
 }
 
 /**
@@ -525,6 +988,7 @@ void StartTask02(void *argument)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
