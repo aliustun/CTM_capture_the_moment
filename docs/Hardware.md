@@ -15,7 +15,7 @@
 | PA8          | XCLK      |
 | PE6	         | D7        |
 | PE5          | D6        |	
-|	PB6          | D5        |
+|	PD3          | D5        |
 | PE4          | D4        |
 | PC9          | D3        |
 | PC8          | D2        |
