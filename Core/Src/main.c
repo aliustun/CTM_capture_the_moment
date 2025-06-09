@@ -505,7 +505,7 @@ static void MX_FMC_Init(void)
   SdramTiming.ExitSelfRefreshDelay = 7;
   SdramTiming.SelfRefreshTime = 4;
   SdramTiming.RowCycleDelay = 7;
-  SdramTiming.WriteRecoveryTime = 2;
+  SdramTiming.WriteRecoveryTime = 3;
   SdramTiming.RPDelay = 2;
   SdramTiming.RCDDelay = 2;
 
@@ -515,6 +515,18 @@ static void MX_FMC_Init(void)
   }
 
   /* USER CODE BEGIN FMC_Init 2 */
+  static GPIO_TypeDef * const GPIOInitTable[] = {
+    GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOF, GPIOG, GPIOG,
+    GPIOD, GPIOD, GPIOD, GPIOD, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOE, GPIOD,   GPIOD, GPIOD,
+    GPIOB, GPIOB, GPIOC, GPIOE, GPIOE, GPIOF, GPIOG, GPIOG, GPIOG, GPIOG,
+    0};
+
+  static uint8_t const PINInitTable[] = {
+    0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 0, 1,
+    14, 15, 0, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 8,
+    9, 10,
+    5, 6, 0, 0, 1, 11, 4, 5, 8, 15,
+    0};
 
   /* USER CODE END FMC_Init 2 */
 }
@@ -944,7 +956,7 @@ void StartDisplayTask(void *argument)
   for(;;)
   {
 	osSemaphoreAcquire(sem_filter_doneHandle, osWaitForever);
-	LCD_Display_Image((uint16_t *) raw_image);
+	LCD_Display_Image((uint16_t *) filtered_image);
   }
   /* USER CODE END StartDisplayTask */
 }
