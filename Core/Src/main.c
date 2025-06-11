@@ -38,6 +38,28 @@
 #define WRITE_READ_ADDR     ((uint32_t)0x0800)
 #define REFRESH_COUNT       ((uint32_t)0x056A)
 static FilterType filterType = FILTER_NONE;
+
+// Filtre değiştirme fonksiyonu
+void cycleFilterType(void) {
+    switch(filterType) {
+        case FILTER_NONE:
+            filterType = FILTER_GRAYSCALE;
+            break;
+        case FILTER_GRAYSCALE:
+            filterType = FILTER_LAPLACIAN;
+            break;
+        case FILTER_LAPLACIAN:
+            filterType = FILTER_GAUSSIAN;
+            break;
+        case FILTER_GAUSSIAN:
+            filterType = FILTER_NONE;
+            break;
+        default:
+            filterType = FILTER_NONE;
+            break;
+    }
+}
+
 static void Fill_Buffer(uint32_t *pBuffer, uint32_t uwBufferLenght, uint32_t uwOffset);
 /* USER CODE END PD */
 
@@ -555,6 +577,16 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, LED3_Pin|LED4_Pin, GPIO_PIN_RESET);
+
+  // Filtre değiştirme butonu için GPIO ayarı
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  // Buton interrupt'ını aktifleştir
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;

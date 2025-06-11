@@ -36,6 +36,25 @@ void applyFilterToImage(uint16_t *input_image, uint16_t *output_image, FilterTyp
         if (filter_type == FILTER_NONE) {
             // Filtre yoksa direkt kopyala
             memcpy(&output_image[row * IMG_COLUMNS], line_buffer[row % 3], IMG_COLUMNS * sizeof(uint16_t));
+        } else if (filter_type == FILTER_GRAYSCALE) {
+            // Grayscale dönüşümü
+            for (int x = 0; x < IMG_COLUMNS; x++) {
+                uint16_t rgb = line_buffer[row % 3][x];
+                uint8_t r = (rgb >> 11) & 0x1F;
+                uint8_t g = (rgb >> 5) & 0x3F;
+                uint8_t b = rgb & 0x1F;
+                
+                // RGB565'den 8-bit grayscale'e dönüşüm
+                uint8_t gray = (r * 299 + g * 587 + b * 114) / 1000;
+                
+                // Grayscale değeri RGB565 formatına geri dönüştür
+                uint8_t r5 = (gray * 31) / 255; // 5 bit
+                uint8_t g6 = (gray * 63) / 255; // 6 bit
+                uint8_t b5 = (gray * 31) / 255; // 5 bit
+                uint16_t rgb565 = (r5 << 11) | (g6 << 5) | b5;
+                
+                output_image[row * IMG_COLUMNS + x] = rgb565;
+            }
         } else if (row >= 2) {
             // Filtre uygulanabilir satırlar için
             int y = row - 1;
@@ -83,6 +102,28 @@ void applyFilterToImageFull(uint16_t *input_image, uint16_t *output_image, Filte
     if (filter_type == FILTER_NONE) {
         // Filtre yoksa direkt kopyala
         memcpy(output_image, input_image, IMG_ROWS * IMG_COLUMNS * sizeof(uint16_t));
+        return;
+    }
+
+    if (filter_type == FILTER_GRAYSCALE) {
+        // Grayscale dönüşümü
+        for (int i = 0; i < IMG_ROWS * IMG_COLUMNS; i++) {
+            uint16_t rgb = input_image[i];
+            uint8_t r = (rgb >> 11) & 0x1F;
+            uint8_t g = (rgb >> 5) & 0x3F;
+            uint8_t b = rgb & 0x1F;
+            
+            // RGB565'den 8-bit grayscale'e dönüşüm
+            uint8_t gray = (r * 299 + g * 587 + b * 114) / 1000;
+            
+            // Grayscale değeri RGB565 formatına geri dönüştür
+            uint8_t r5 = (gray * 31) / 255; // 5 bit
+            uint8_t g6 = (gray * 63) / 255; // 6 bit
+            uint8_t b5 = (gray * 31) / 255; // 5 bit
+            uint16_t rgb565 = (r5 << 11) | (g6 << 5) | b5;
+            
+            output_image[i] = rgb565;
+        }
         return;
     }
 

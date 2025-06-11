@@ -6,7 +6,8 @@
 typedef enum {
     FILTER_NONE,
     FILTER_LAPLACIAN,
-    FILTER_GAUSSIAN
+    FILTER_GAUSSIAN,
+    FILTER_GRAYSCALE
 } FilterType;
 
 extern const int laplacian_kernel[3][3];
