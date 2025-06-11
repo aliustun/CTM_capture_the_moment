@@ -55,7 +55,11 @@ void cycleFilterType(void) {
             filterType = FILTER_ROI;
             break;
         case FILTER_ROI:
+        	filterType = FILTER_ROI_CENTER_ALARM;
+        	break;
+        case FILTER_ROI_CENTER_ALARM:
         	filterType = FILTER_NONE;
+        	break;
         default:
             filterType = FILTER_NONE;
             break;
