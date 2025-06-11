@@ -90,9 +90,9 @@ void applyFilterToImage(uint16_t *input_image, uint16_t *output_image, FilterTyp
                 output_image[y * IMG_COLUMNS + x] = rgb565;
             }
         } else {
-            // İlk iki satır için beyaz yap
+            // İlk iki satır için siyah yap
             for (int i = 0; i < IMG_COLUMNS; i++) {
-                output_image[row * IMG_COLUMNS + i] = 0xFFFF;
+                output_image[row * IMG_COLUMNS + i] = 0x0000;
             }
         }
     }
@@ -131,21 +131,21 @@ void applyFilterToImageFull(uint16_t *input_image, uint16_t *output_image, Filte
     const int (*kernel)[3] = (filter_type == FILTER_LAPLACIAN) ? laplacian_kernel : gaussian_kernel;
     int kernel_factor = (filter_type == FILTER_LAPLACIAN) ? 1 : gaussian_factor;
 
-    // İlk iki satırı beyaz yap
+    // İlk iki satırı siyah yap
     for (int i = 0; i < 2 * IMG_COLUMNS; i++) {
-        output_image[i] = 0xFFFF;
+        output_image[i] = 0x0000;
     }
 
-    // Son iki satırı beyaz yap
+    // Son iki satırı siyah yap
     for (int i = (IMG_ROWS - 2) * IMG_COLUMNS; i < IMG_ROWS * IMG_COLUMNS; i++) {
-        output_image[i] = 0xFFFF;
+        output_image[i] = 0x0000;
     }
 
     // Kenar pikselleri hariç tüm görüntüyü işle
     for (int row = 1; row < IMG_ROWS - 1; row++) {
-        // İşlenen satırın ilk ve son pikselleri beyaz yap
-        output_image[row * IMG_COLUMNS] = 0xFFFF;                    // Satırın ilk pikseli
-        output_image[row * IMG_COLUMNS + (IMG_COLUMNS - 1)] = 0xFFFF; // Satırın son pikseli
+        // İşlenen satırın ilk ve son pikselleri siyah yap
+        output_image[row * IMG_COLUMNS] = 0x0000;                    // Satırın ilk pikseli
+        output_image[row * IMG_COLUMNS + (IMG_COLUMNS - 1)] = 0x0000; // Satırın son pikseli
 
         for (int col = 1; col < IMG_COLUMNS - 1; col++) {
             uint8_t window[3][3];

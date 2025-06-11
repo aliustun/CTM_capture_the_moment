@@ -52,8 +52,10 @@ void cycleFilterType(void) {
             filterType = FILTER_GAUSSIAN;
             break;
         case FILTER_GAUSSIAN:
-            filterType = FILTER_NONE;
+            filterType = FILTER_ROI;
             break;
+        case FILTER_ROI:
+        	filterType = FILTER_NONE;
         default:
             filterType = FILTER_NONE;
             break;
