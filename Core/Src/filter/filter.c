@@ -6,6 +6,49 @@
 #define SDRAM_BANK_ADDR     ((uint32_t)0xD0000000)
 #define PREVIOUS_FRAME_ADDR (SDRAM_BANK_ADDR + 0x100000) // SDRAM'de önceki kare için ayrılan alan
 
+// ROI optimizasyon ayarları
+#define ROI_OPT_BLOCK_SIZE 32  // ROI blok boyutu
+#define ROI_OPT_THRESHOLD 0   // Değişim algılama eşiği
+
+static bool roi_optimization_enabled = false;  // ROI optimizasyon flag'i
+
+// ROI optimizasyon kontrol fonksiyonları
+void setROIOptimizationEnabled(bool enabled) {
+    roi_optimization_enabled = enabled;
+}
+
+bool isROIOptimizationEnabled(void) {
+    return roi_optimization_enabled;
+}
+
+// Bir ROI bloğunda değişim olup olmadığını kontrol et
+static bool checkROIBlockChange(uint16_t *current_frame, uint16_t *previous_frame, 
+                              int start_x, int start_y, int block_size) {
+    int total_change = 0;
+    
+    for (int y = start_y; y < start_y + block_size && y < IMG_ROWS; y++) {
+        for (int x = start_x; x < start_x + block_size && x < IMG_COLUMNS; x++) {
+            if (y >= 0 && x >= 0) {
+                uint16_t current_rgb = current_frame[y * IMG_COLUMNS + x];
+                uint16_t previous_rgb = previous_frame[y * IMG_COLUMNS + x];
+                
+                // RGB565'den grayscale'e dönüştür
+                uint8_t current_gray = ((current_rgb >> 11) & 0x1F) * 299/1000 + 
+                                     ((current_rgb >> 5) & 0x3F) * 587/1000 + 
+                                     (current_rgb & 0x1F) * 114/1000;
+                
+                uint8_t previous_gray = ((previous_rgb >> 11) & 0x1F) * 299/1000 + 
+                                      ((previous_rgb >> 5) & 0x3F) * 587/1000 + 
+                                      (previous_rgb & 0x1F) * 114/1000;
+                
+                total_change += abs(current_gray - previous_gray);
+            }
+        }
+    }
+    
+    return (total_change > ROI_OPT_THRESHOLD * block_size * block_size);
+}
+
 const int laplacian_kernel[3][3] = {
     {-1, -1, -1},
     {-1,  8, -1},
@@ -120,6 +163,76 @@ void applyFilterToImage(uint16_t *input_image, uint16_t *output_image, FilterTyp
 }
 
 void applyFilterToImageFull(uint16_t *input_image, uint16_t *output_image, FilterType filter_type) {
+    uint16_t *previous_frame = (uint16_t *)PREVIOUS_FRAME_ADDR;
+    
+    // ROI optimizasyonu aktif ve filtre tipi uygunsa
+    if (roi_optimization_enabled && 
+        (filter_type == FILTER_LAPLACIAN || filter_type == FILTER_GAUSSIAN || filter_type == FILTER_GRAYSCALE)) {
+        
+        // İlk frame için tüm görüntüyü işle
+        if (first_frame) {
+            memcpy(previous_frame, input_image, IMG_ROWS * IMG_COLUMNS * sizeof(uint16_t));
+            first_frame = 0;
+        }
+        
+        // Önce çıkış görüntüsünü giriş görüntüsüyle aynı yap
+        memcpy(output_image, input_image, IMG_ROWS * IMG_COLUMNS * sizeof(uint16_t));
+        
+        // ROI blokları üzerinde döngü
+        for (int y = 0; y < IMG_ROWS; y += ROI_OPT_BLOCK_SIZE) {
+            for (int x = 0; x < IMG_COLUMNS; x += ROI_OPT_BLOCK_SIZE) {
+                // Blokta değişim varsa filtreyi uygula
+                if (checkROIBlockChange(input_image, previous_frame, x, y, ROI_OPT_BLOCK_SIZE)) {
+                    // Blok için filtre uygula
+                    for (int by = y; by < y + ROI_OPT_BLOCK_SIZE && by < IMG_ROWS - 1; by++) {
+                        for (int bx = x; bx < x + ROI_OPT_BLOCK_SIZE && bx < IMG_COLUMNS - 1; bx++) {
+                            if (by > 0 && bx > 0) {  // Kenar kontrolü
+                                uint8_t window[3][3];
+                                
+                                // 3x3 pencere oluştur
+                                for (int i = -1; i <= 1; i++) {
+                                    for (int j = -1; j <= 1; j++) {
+                                        uint16_t rgb = input_image[(by + i) * IMG_COLUMNS + (bx + j)];
+                                        uint8_t r = (rgb >> 11) & 0x1F;
+                                        uint8_t g = (rgb >> 5) & 0x3F;
+                                        uint8_t b = rgb & 0x1F;
+                                        window[i + 1][j + 1] = (r * 299 + g * 587 + b * 114) / 1000;
+                                    }
+                                }
+                                
+                                // Filtre tipine göre işlem
+                                if (filter_type == FILTER_GRAYSCALE) {
+                                    uint8_t gray = window[1][1];
+                                    uint8_t r5 = (gray * 31) / 255;
+                                    uint8_t g6 = (gray * 63) / 255;
+                                    uint8_t b5 = (gray * 31) / 255;
+                                    output_image[by * IMG_COLUMNS + bx] = (r5 << 11) | (g6 << 5) | b5;
+                                } else {
+                                    const int (*kernel)[3] = (filter_type == FILTER_LAPLACIAN) ? 
+                                                            laplacian_kernel : gaussian_kernel;
+                                    int kernel_factor = (filter_type == FILTER_LAPLACIAN) ? 1 : gaussian_factor;
+                                    
+                                    int result;
+                                    applyKernel3x3_window(window, kernel, kernel_factor, &result);
+                                    
+                                    uint8_t r5 = (result * 31) / 255;
+                                    uint8_t g6 = (result * 63) / 255;
+                                    uint8_t b5 = (result * 31) / 255;
+                                    output_image[by * IMG_COLUMNS + bx] = (r5 << 11) | (g6 << 5) | b5;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Mevcut frame'i kaydet
+        memcpy(previous_frame, input_image, IMG_ROWS * IMG_COLUMNS * sizeof(uint16_t));
+        return;
+    }
+    
+    // ROI optimizasyonu aktif değilse veya uygun olmayan filtre tipi için normal işleme devam et
     if (filter_type == FILTER_NONE) {
         // Filtre yoksa direkt kopyala
         memcpy(output_image, input_image, IMG_ROWS * IMG_COLUMNS * sizeof(uint16_t));
@@ -149,8 +262,6 @@ void applyFilterToImageFull(uint16_t *input_image, uint16_t *output_image, Filte
     }
 
     if (filter_type == FILTER_ROI) {
-        uint16_t *previous_frame = (uint16_t *)PREVIOUS_FRAME_ADDR;
-
         // İlk kareyi işle
         if (first_frame) {
             memcpy(output_image, input_image, IMG_ROWS * IMG_COLUMNS * sizeof(uint16_t));
@@ -204,7 +315,6 @@ void applyFilterToImageFull(uint16_t *input_image, uint16_t *output_image, Filte
     }
 
     if (filter_type == FILTER_ROI_CENTER_ALARM) {
-        uint16_t *previous_frame = (uint16_t *)PREVIOUS_FRAME_ADDR;
         uint32_t current_time = osKernelGetTickCount(); // Mevcut zaman
 
         // İlk kareyi işle

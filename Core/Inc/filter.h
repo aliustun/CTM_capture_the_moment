@@ -1,7 +1,8 @@
-#ifndef FILTER_H
-#define FILTER_H
+#ifndef FILTER_H_
+#define FILTER_H_
 
-#include <stdint.h>
+#include "main.h"
+#include "camera_drv.h"
 
 typedef enum {
     FILTER_NONE,
@@ -12,6 +13,10 @@ typedef enum {
     FILTER_ROI_CENTER_ALARM
 } FilterType;
 
+// ROI optimizasyon kontrolü için fonksiyonlar
+void setROIOptimizationEnabled(bool enabled);
+bool isROIOptimizationEnabled(void);
+
 extern const int laplacian_kernel[3][3];
 extern const int gaussian_kernel[3][3];
 extern const int gaussian_factor;
@@ -20,4 +25,4 @@ void applyKernel3x3_window(uint8_t window[3][3], const int kernel[3][3], int ker
 void applyFilterToImage(uint16_t *input_image, uint16_t *output_image, FilterType filter_type);
 void applyFilterToImageFull(uint16_t *input_image, uint16_t *output_image, FilterType filter_type);
 
-#endif // FILTER_H
+#endif /* FILTER_H_ */
