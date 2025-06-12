@@ -2,18 +2,22 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://aliustun.github.io/CTM_capture_the_moment/</loc>
-         <lastmod>2025-06-09</lastmod>
+         <lastmod>2025-06-12</lastmod>
     </url>
     <url>
          <loc>https://aliustun.github.io/CTM_capture_the_moment/Details/</loc>
-         <lastmod>2025-06-09</lastmod>
+         <lastmod>2025-06-12</lastmod>
     </url>
     <url>
          <loc>https://aliustun.github.io/CTM_capture_the_moment/Hardware/</loc>
-         <lastmod>2025-06-09</lastmod>
+         <lastmod>2025-06-12</lastmod>
     </url>
     <url>
          <loc>https://aliustun.github.io/CTM_capture_the_moment/Software/</loc>
-         <lastmod>2025-06-09</lastmod>
+         <lastmod>2025-06-12</lastmod>
+    </url>
+    <url>
+         <loc>https://aliustun.github.io/CTM_capture_the_moment/image_filtering_module/</loc>
+         <lastmod>2025-06-12</lastmod>
     </url>
 </urlset>

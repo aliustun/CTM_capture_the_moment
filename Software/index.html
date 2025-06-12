@@ -14,7 +14,7 @@
         <link rel="prev" href="../Hardware/">
       
       
-        <link rel="next" href="../Details/">
+        <link rel="next" href="../image_filtering_module/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -256,6 +256,23 @@
   
   
     <li class="md-tabs__item">
+      <a href="../image_filtering_module/" class="md-tabs__link">
+        
+  
+    
+  
+  Image Filtering
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../Details/" class="md-tabs__link">
         
   
@@ -438,6 +455,26 @@
   
   
     <li class="md-nav__item">
+      <a href="../image_filtering_module/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Image Filtering
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../Details/" class="md-nav__link">
         
   
@@ -520,17 +557,13 @@
 
 <h1 id="software-architecture">Software Architecture</h1>
 <h2 id="clock-configuration">Clock Configuration</h2>
-<p>Here, in clock configuration HSE[^1], an external clock source is configured and PLL[^2] scalers are to to it possible maximum values. 
+<p>Here, in clock configuration <abbr title="High-Speed External">HSE</abbr>, an external clock source is configured and <abbr title="Phase Locked Loop">PLL</abbr> scalers are to to it possible maximum values. 
 <img alt="Clock Configuration" src="../img/clock_conf.png" /></p>
 <h2 id="interfaces">Interfaces</h2>
 <ul>
 <li>I2C1 is configured to set Registers of OV7670. </li>
-<li>SPI5 is configured to drive TFT[^3] LCD[^4] screen.  </li>
+<li>SPI5 is configured to drive <abbr title="Thin Transistor Film">TFT</abbr> <abbr title="Liquid Crystal Display">LCD</abbr> screen.  </li>
 </ul>
-<p>[^1]: High-Speed External
-[^2]: Phase Locked Loop
-[^3]: Thin Transistor Film
-[^4]: Liquid Crystal Display</p>
 
 
 

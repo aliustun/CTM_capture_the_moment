@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://aliustun.github.io/CTM_capture_the_moment/Details/">
       
       
-        <link rel="prev" href="../Software/">
+        <link rel="prev" href="../image_filtering_module/">
       
       
       
@@ -250,6 +250,23 @@
         
   
   
+  
+    <li class="md-tabs__item">
+      <a href="../image_filtering_module/" class="md-tabs__link">
+        
+  
+    
+  
+  Image Filtering
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
     
   
   
@@ -363,6 +380,26 @@
   
   <span class="md-ellipsis">
     Software
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../image_filtering_module/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Image Filtering
   </span>
   
 
@@ -645,35 +682,35 @@
 <h1 id="project-details">Project Details</h1>
 <p>This project is proposed in accordance with the ELE529E Lecture at Istanbul Technical University.</p>
 <h2 id="1-introduction">1. Introduction</h2>
-<p>This project investigates real-time image processing using FreeRTOS[^1] on STM32F429I Discovery Board. The board features a built-in LCD[^2] and supports DCMI[^3], making it ideal for interfacing with external cameras such as the OV7670. Applications of such embedded vision systems include industrial automation, surveillance, and portable diagnostics.</p>
+<p>This project investigates real-time image processing using <abbr title="Free Real-Time Operating System">FreeRTOS</abbr> on STM32F429I Discovery Board. The board features a built-in <abbr title="Liquid Crystal Display">LCD</abbr> and supports <abbr title="Digital Camera Interface">DCMI</abbr>, making it ideal for interfacing with external cameras such as the OV7670. Applications of such embedded vision systems include industrial automation, surveillance, and portable diagnostics.</p>
 <h2 id="2-system-architecture">2. System Architecture</h2>
-<p>The system consists of a camera input, memory buffering using DMA[^4], and LCD output. The architecture uses:
-- <strong>OV7670</strong> camera module connected via DCMI and SSCB[^5]
-- <strong>DMA</strong> for efficient memory transfer
-- <strong>Frame buffer</strong> in RAM or SDRAM
-- <strong>SPI</strong>[^6] for driving the onboard LCD
-- <strong>FreeRTOS</strong> for managing concurrent tasks</p>
+<p>The system consists of a camera input, memory buffering using <abbr title="Direct Memory Access">DMA</abbr>, and <abbr title="Liquid Crystal Display">LCD</abbr> output. The architecture uses:
+- <strong>OV7670</strong> camera module connected via <abbr title="Digital Camera Interface">DCMI</abbr> and <abbr title="Serial Camera Control Bus">SCCB</abbr>
+- <strong><abbr title="Direct Memory Access">DMA</abbr></strong> for efficient memory transfer
+- <strong>Frame buffer</strong> in <abbr title="Random Access Memory">RAM</abbr> or <abbr title="Synchronous Dynamic Random Address Memory">SDRAM</abbr>
+- <strong><abbr title="Serial Peripheral Interface">SPI</abbr></strong> for driving the onboard <abbr title="Liquid Crystal Display">LCD</abbr>
+- <strong><abbr title="Free Real-Time Operating System">FreeRTOS</abbr></strong> for managing concurrent tasks</p>
 <pre><code class="language-mermaid">flowchart TD
   OV7670 --&gt;|DCMI + SSCB + DMA| RAM[Frame Buffer]
   RAM --&gt;|SPI with ILI9341 LCD Driver| LCD
   FreeRTOS --&gt;|Schedules| Tasks
 </code></pre>
-<h2 id="3-rtos-based-task-scheduling">3. RTOS-Based Task Scheduling</h2>
-<p>FreeRTOS tasks manage the operation as follows:
-- <strong>CameraTask</strong>: Configures and triggers DCMI DMA captures.
-- <strong>DisplayTask</strong>: Reads from frame buffer and updates LCD.
+<h2 id="3-rtos-based-task-scheduling">3. <abbr title="Real-Time Operating System">RTOS</abbr>-Based Task Scheduling</h2>
+<p><abbr title="Free Real-Time Operating System">FreeRTOS</abbr> tasks manage the operation as follows:
+- <strong>CameraTask</strong>: Configures and triggers <abbr title="Digital Camera Interface">DCMI</abbr> <abbr title="Direct Memory Access">DMA</abbr> captures.
+- <strong>DisplayTask</strong>: Reads from frame buffer and updates <abbr title="Liquid Crystal Display">LCD</abbr>.
 - <strong>ProcessingTask</strong> (optional): Applies filters or transformations to the frame buffer.</p>
 <p>Each task uses <code>osDelay</code>, mutexes or semaphores to synchronize access to the shared buffer.</p>
-<h2 id="4-dma-and-interrupt-based-frame-capture">4. DMA and Interrupt-Based Frame Capture</h2>
-<p>DMA is configured to transfer camera data from DCMI to RAM[^7], triggered on frame complete interrupts. This minimizes CPU overhead.</p>
+<h2 id="4-dma-and-interrupt-based-frame-capture">4. <abbr title="Direct Memory Access">DMA</abbr> and Interrupt-Based Frame Capture</h2>
+<p><abbr title="Direct Memory Access">DMA</abbr> is configured to transfer camera data from <abbr title="Digital Camera Interface">DCMI</abbr> to <abbr title="Random Access Memory">RAM</abbr>[^7], triggered on frame complete interrupts. This minimizes CPU overhead.</p>
 <ul>
 <li><strong>DCMI_IRQHandler</strong>: Signals a task via semaphore or event flag.</li>
-<li><strong>DMA Interrupt</strong>: Ensures frame is fully transferred before display.</li>
+<li><strong><abbr title="Direct Memory Access">DMA</abbr> Interrupt</strong>: Ensures frame is fully transferred before display.</li>
 </ul>
-<h2 id="5-camera-and-lcd-driver-integration">5. Camera and LCD Driver Integration</h2>
+<h2 id="5-camera-and-lcd-driver-integration">5. Camera and <abbr title="Liquid Crystal Display">LCD</abbr> Driver Integration</h2>
 <p>The BSP (Board Support Package) is used to simplify interfacing:
-- <code>stm32f429i_discovery_lcd.c</code> for LCD display
-- Custom <code>OV7670.c</code> using HAL I2C for SCCB control
+- <code>stm32f429i_discovery_lcd.c</code> for <abbr title="Liquid Crystal Display">LCD</abbr> display
+- Custom <code>OV7670.c</code> using HAL I2C for <abbr title="Serial Camera Control Bus">SCCB</abbr> control
 - CubeMX-generated <code>MX_DMA_Init()</code> and <code>MX_DCMI_Init()</code> handle peripheral setup</p>
 <h2 id="6-real-time-image-filtering">6. Real-Time Image Filtering</h2>
 <p>A simple image processing pipeline can include:
@@ -689,8 +726,8 @@
 <li>OV7670 clock and timing tuning</li>
 </ul>
 <h2 id="8-conclusion-and-future-improvements">8. Conclusion and Future Improvements</h2>
-<p>This project demonstrates a basic embedded vision pipeline using RTOS. Future extensions may include:
-- Performance optimization with SDRAM and cache
+<p>This project demonstrates a basic embedded vision pipeline using <abbr title="Real-Time Operating System">RTOS</abbr>. Future extensions may include:
+- Performance optimization with <abbr title="Synchronous Dynamic Random Address Memory">SDRAM</abbr> and cache
 - Integration with TouchGFX for UI
 - Object detection using CNNs (e.g., TinyML)
 - SD card logging or USB streaming</p>
@@ -698,17 +735,10 @@
 <ol>
 <li>STM32F429I-DISC1 User Manual, STMicroelectronics  </li>
 <li>OV7670 Camera Module Datasheet  </li>
-<li>AN5020: STM32F4 DCMI Interface Application Note  </li>
-<li>FreeRTOS Documentation – https://freertos.org  </li>
+<li>AN5020: STM32F4 <abbr title="Digital Camera Interface">DCMI</abbr> Interface Application Note  </li>
+<li><abbr title="Free Real-Time Operating System">FreeRTOS</abbr> Documentation – https://freertos.org  </li>
 <li>STM32 HAL Reference Manual  </li>
 </ol>
-<p>[^1]: Real-Time Operating System
-[^2]: Liquid Crystal Display
-[^3]: Digital Camera Interface
-[^4]: Direct Memory Access
-[^5]: Serial Camera Control Bus
-[^6]: Serial Peripheral Interface
-[^7]: Random Access Memory</p>
 
 
 
