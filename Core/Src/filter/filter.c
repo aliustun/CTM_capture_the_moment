@@ -18,16 +18,55 @@ const int gaussian_kernel[3][3] = {
 };
 const int gaussian_factor = 16;
 
-// ROI filtresi için sabitler
-#define ROI_TH 0
-#define ROI_WIDTH 5
-#define ROI_HEIGHT 5
 
-// Merkez ROI Alarm için sabitler
-#define CENTER_ROI_SIZE 50
-#define CENTER_ROI_TH 25000
-#define ALARM_COLOR 0xF800  // Kırmızı renk (RGB565 formatında)
-#define ALARM_DURATION_MS 1000 // Alarm süresi (ms)
+static bool roi_optimization_enabled = false;  // ROI optimizasyon flag'i
+
+// ROI optimizasyon kontrol fonksiyonları
+void setROIOptimizationEnabled(bool enabled) {
+    roi_optimization_enabled = enabled;
+}
+
+bool isROIOptimizationEnabled(void) {
+    return roi_optimization_enabled;
+}
+
+// Bir ROI bloğunda değişim olup olmadığını kontrol et
+static bool checkROIBlockChange(uint16_t *current_frame, uint16_t *previous_frame, 
+                              int start_x, int start_y, int block_size) {
+    int total_change = 0;
+    
+    for (int y = start_y; y < start_y + block_size && y < IMG_ROWS; y++) {
+        for (int x = start_x; x < start_x + block_size && x < IMG_COLUMNS; x++) {
+            if (y >= 0 && x >= 0) {
+                uint16_t current_rgb = current_frame[y * IMG_COLUMNS + x];
+                uint16_t previous_rgb = previous_frame[y * IMG_COLUMNS + x];
+                
+                // RGB565'den grayscale'e dönüştür
+                uint8_t current_gray = ((current_rgb >> 11) & 0x1F) * 299/1000 + 
+                                     ((current_rgb >> 5) & 0x3F) * 587/1000 + 
+                                     (current_rgb & 0x1F) * 114/1000;
+                
+                uint8_t previous_gray = ((previous_rgb >> 11) & 0x1F) * 299/1000 + 
+                                      ((previous_rgb >> 5) & 0x3F) * 587/1000 + 
+                                      (previous_rgb & 0x1F) * 114/1000;
+                
+                total_change += abs(current_gray - previous_gray);
+            }
+        }
+    }
+    
+    return (total_change > ROI_OPT_THRESHOLD * block_size * block_size);
+}
+// // ROI filtresi için sabitler
+// #define ROI_TH 0
+// #define ROI_WIDTH 5
+// #define ROI_HEIGHT 5
+
+// // Merkez ROI Alarm için sabitler
+// #define CENTER_ROI_SIZE 50
+// #define CENTER_ROI_TH 25000
+// #define ALARM_COLOR 0xF800  // Kırmızı renk (RGB565 formatında)
+// #define ALARM_DURATION_MS 1000 // Alarm süresi (ms)
 
 static uint8_t first_frame = 1; // İlk kare kontrolü
 static uint8_t first_frame_center = 1; // Merkez ROI için ilk kare kontrolü

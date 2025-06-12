@@ -66,6 +66,16 @@ void cycleFilterType(void) {
     }
 }
 
+// Test Defines
+// Test görüntüsü boyutları
+#define TEST_WIDTH 32
+#define TEST_HEIGHT 32
+
+// Test sonuçları için renkli çıktı
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 static void Fill_Buffer(uint32_t *pBuffer, uint32_t uwBufferLenght, uint32_t uwOffset);
 /* USER CODE END PD */
 
@@ -133,6 +143,9 @@ uint16_t line_buffer[3][IMG_COLUMNS];             // 3 satırlık geçici buffer
 uint16_t raw_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
 __attribute__((section(".sdram"))) uint16_t filtered_image[IMG_ROWS * IMG_COLUMNS]; // Çıkış (her zaman RGB565)
 
+// filter test
+uint8_t grayscale_success, laplacian_success, roiopt_success, roialarm_success;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -191,6 +204,11 @@ int main(void)
   MX_I2C1_Init();
   MX_FMC_Init();
   /* USER CODE BEGIN 2 */
+  grayscale_success=0; 
+  laplacian_success=0; 
+  roiopt_success=0;
+  roialarm_success=0;
+  
   HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
   LCD_Open(NULL);
@@ -247,6 +265,9 @@ int main(void)
           /* Turn on LED3 */
         	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
         }
+
+     // Filter Code Test
+        //runFilterTests();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -958,6 +979,191 @@ static void Fill_Buffer(uint32_t *pBuffer, uint32_t uwBufferLenght, uint32_t uwO
     pBuffer[tmpIndex] = tmpIndex + uwOffset;
   }
 }
+
+// Ana test fonksiyonu
+void runFilterTests(void) {
+    testGrayscaleFilter();
+    
+    testLaplacianFilter();
+    
+    testROIOptimization();
+    
+    testCenterROIAlarm();
+}
+
+// Test görüntüsü oluşturma
+static void createTestImage(uint16_t *image, int pattern) {
+    for (int y = 0; y < TEST_HEIGHT; y++) {
+        for (int x = 0; x < TEST_WIDTH; x++) {
+            switch (pattern) {
+                case 0: // Düz gri
+                    image[y * TEST_WIDTH + x] = 0x8410; // RGB565 format
+                    break;
+                case 1: // Dikey çizgiler
+                    image[y * TEST_WIDTH + x] = (x % 2) ? 0xFFFF : 0x0000;
+                    break;
+                case 2: // Yatay çizgiler
+                    image[y * TEST_WIDTH + x] = (y % 2) ? 0xFFFF : 0x0000;
+                    break;
+                case 3: // Dama tahtası
+                    image[y * TEST_WIDTH + x] = ((x + y) % 2) ? 0xFFFF : 0x0000;
+                    break;
+            }
+        }
+    }
+}
+
+// Test sonucu kontrolü
+static int compareImages(uint16_t *img1, uint16_t *img2, int size) {
+    int diff = 0;
+    for (int i = 0; i < size; i++) {
+        if (img1[i] != img2[i]) diff++;
+    }
+    return diff;
+}
+
+// Grayscale filtre testi
+static void testGrayscaleFilter(void) {
+    uint16_t input[TEST_WIDTH * TEST_HEIGHT];
+    uint16_t output[TEST_WIDTH * TEST_HEIGHT];
+    uint16_t expected[TEST_WIDTH * TEST_HEIGHT];
+    
+    // printf("Test: Grayscale Filtresi\n");
+    
+    // Test 1: Düz gri görüntü
+    createTestImage(input, 0);
+    memset(output, 0, sizeof(output));
+    applyFilterToImageFull(input, output, FILTER_GRAYSCALE);
+    
+    // Düz gri görüntü için çıktı aynı olmalı
+    int diff = compareImages(input, output, TEST_WIDTH * TEST_HEIGHT);
+    // printf("  Test 1 (Düz Gri): %s%s%s\n", 
+    //        diff == 0 ? ANSI_COLOR_GREEN : ANSI_COLOR_RED,
+    //        diff == 0 ? "BAŞARILI" : "BAŞARISIZ",
+    //        ANSI_COLOR_RESET);
+    
+    // Test 2: Siyah-beyaz dama tahtası
+    createTestImage(input, 3);
+    memset(output, 0, sizeof(output));
+    applyFilterToImageFull(input, output, FILTER_GRAYSCALE);
+    
+    grayscale_success = output[0] != input[0] ? 1 : 0;
+    // // Çıktıda gri tonları olmalı
+    // printf("  Test 2 (Dama Tahtası): %s%s%s\n",
+    //        output[0] != input[0] ? ANSI_COLOR_GREEN : ANSI_COLOR_RED,
+    //        output[0] != input[0] ? "BAŞARILI" : "BAŞARISIZ",
+    //        ANSI_COLOR_RESET);
+}
+
+// Laplacian filtre testi
+static void testLaplacianFilter(void) {
+    uint16_t input[TEST_WIDTH * TEST_HEIGHT];
+    uint16_t output[TEST_WIDTH * TEST_HEIGHT];
+    
+    // printf("Test: Laplacian Filtresi\n");
+    
+    // Test 1: Düz gri görüntü
+    createTestImage(input, 0);
+    memset(output, 0, sizeof(output));
+    applyFilterToImageFull(input, output, FILTER_LAPLACIAN);
+    
+    // Düz görüntüde kenar olmamalı
+    int edges = 0;
+    for (int i = 0; i < TEST_WIDTH * TEST_HEIGHT; i++) {
+        if (output[i] > 0x1000) edges++; // Belirgin kenar eşiği
+    }
+    
+    // printf("  Test 1 (Düz Gri): %s%s%s\n",
+    //        edges < TEST_WIDTH ? ANSI_COLOR_GREEN : ANSI_COLOR_RED,
+    //        edges < TEST_WIDTH ? "BAŞARILI" : "BAŞARISIZ",
+    //        ANSI_COLOR_RESET);
+    
+    // Test 2: Dikey çizgiler
+    createTestImage(input, 1);
+    memset(output, 0, sizeof(output));
+    applyFilterToImageFull(input, output, FILTER_LAPLACIAN);
+    
+    // Dikey kenarlarda yüksek değerler olmalı
+    edges = 0;
+    for (int i = 0; i < TEST_WIDTH * TEST_HEIGHT; i++) {
+        if (output[i] > 0x1000) edges++;
+    }
+    
+    laplacian_success = edges > TEST_WIDTH ? 1 : 0;
+    // printf("  Test 2 (Dikey Çizgiler): %s%s%s\n",
+    //        edges > TEST_WIDTH ? ANSI_COLOR_GREEN : ANSI_COLOR_RED,
+    //        edges > TEST_WIDTH ? "BAŞARILI" : "BAŞARISIZ",
+    //        ANSI_COLOR_RESET);
+}
+
+// ROI optimizasyon testi
+static void testROIOptimization(void) {
+    uint16_t input[TEST_WIDTH * TEST_HEIGHT];
+    uint16_t output1[TEST_WIDTH * TEST_HEIGHT];
+    uint16_t output2[TEST_WIDTH * TEST_HEIGHT];
+    
+    // printf("Test: ROI Optimizasyonu\n");
+    
+    // Test görüntüsü oluştur
+    createTestImage(input, 3);
+    
+    // ROI optimizasyonu kapalıyken işle
+    setROIOptimizationEnabled(false);
+    applyFilterToImageFull(input, output1, FILTER_LAPLACIAN);
+    
+    // ROI optimizasyonu açıkken işle
+    setROIOptimizationEnabled(true);
+    applyFilterToImageFull(input, output2, FILTER_LAPLACIAN);
+    
+    // Sonuçlar benzer olmalı (küçük farklılıklar olabilir)
+    int diff = compareImages(output1, output2, TEST_WIDTH * TEST_HEIGHT);
+    float diff_percent = (float)diff / (TEST_WIDTH * TEST_HEIGHT) * 100;
+    
+    roiopt_success = diff_percent < 10.0f ? 1 : 0;
+    // printf("  Test (Optimizasyon Karşılaştırma): %s%s%s\n",
+    //        diff_percent < 10.0f ? ANSI_COLOR_GREEN : ANSI_COLOR_RED,
+    //        diff_percent < 10.0f ? "BAŞARILI" : "BAŞARISIZ",
+    //        ANSI_COLOR_RESET);
+    // printf("  Farklılık: %.2f%%\n", diff_percent);
+}
+
+// Merkez ROI alarm testi
+static void testCenterROIAlarm(void) {
+    uint16_t input1[TEST_WIDTH * TEST_HEIGHT];
+    uint16_t input2[TEST_WIDTH * TEST_HEIGHT];
+    uint16_t output[TEST_WIDTH * TEST_HEIGHT];
+    
+    // printf("Test: Merkez ROI Alarm\n");
+    
+    // İlk kare: Düz gri
+    createTestImage(input1, 0);
+    memset(output, 0, sizeof(output));
+    applyFilterToImageFull(input1, output, FILTER_ROI_CENTER_ALARM);
+    
+    // İkinci kare: Dama tahtası (değişim yaratmak için)
+    createTestImage(input2, 3);
+    applyFilterToImageFull(input2, output, FILTER_ROI_CENTER_ALARM);
+    
+    // Merkez bölgede alarm rengi olmalı
+    int alarm_pixels = 0;
+    int center_y = TEST_HEIGHT / 2;
+    int center_x = TEST_WIDTH / 2;
+    
+    for (int y = center_y - CENTER_ROI_SIZE/2; y < center_y + CENTER_ROI_SIZE/2; y++) {
+        for (int x = center_x - CENTER_ROI_SIZE/2; x < center_x + CENTER_ROI_SIZE/2; x++) {
+            if (y >= 0 && y < TEST_HEIGHT && x >= 0 && x < TEST_WIDTH) {
+                if (output[y * TEST_WIDTH + x] == ALARM_COLOR) alarm_pixels++;
+            }
+        }
+    }
+    
+    roialarm_success = alarm_pixels > 0 ? 1 : 0;
+    // printf("  Test (Alarm Tetikleme): %s%s%s\n",
+    //        alarm_pixels > 0 ? ANSI_COLOR_GREEN : ANSI_COLOR_RED,
+    //        alarm_pixels > 0 ? "BAŞARILI" : "BAŞARISIZ",
+    //        ANSI_COLOR_RESET);
+}
+ 
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartCameraTask */
@@ -975,7 +1181,7 @@ void StartCameraTask(void *argument)
   {
     osSemaphoreAcquire(sem_frame_capturedHandle, osWaitForever);
     osThreadFlagsSet(FilterTaskHandle, 0x01);
-	osDelay(10); // kamera hızı kadar beklenebilir
+	  osDelay(10); // kamera hızı kadar beklenebilir
   }
   /* USER CODE END 5 */
 }
