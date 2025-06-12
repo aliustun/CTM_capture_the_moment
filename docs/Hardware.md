@@ -3,6 +3,14 @@
   - Built-in Touchscreen LCD
 - [OV7670 Camera Module](https://www.robotsepeti.com/arduino-kamera-modulu-ov7670)
 
+## Diagram
+![System Architecture](img/diagram.jpeg)
+
+## Result
+![STM32F429-DISC1 Board Front](img/stm32f429-front.jpeg)
+
+![STM32F429-DISC1 Board Rear](img/stm32f429-rear.jpeg)
+
 ## Connections
 
 ### DCMI Wiring
