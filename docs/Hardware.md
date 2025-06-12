@@ -5,7 +5,7 @@
 
 ## Connections
 
-### DCMI[^1] Wiring
+### DCMI Wiring
 
 | **uC Board** | **OV7670**| 
 |--------------|-----------|
@@ -22,7 +22,7 @@
 | PC7          | D1        |
 | PC6          | D0        |
 
-### SSCB[^2] Wiring
+### SCCB Wiring
 
 | **uC Board** | **OV7670**| 
 |--------------|-----------|
@@ -30,7 +30,7 @@
 | PB9          | SDA       |
 
 
-### SDRAM[^3] Wiring
+### SDRAM Wiring
 
 | **uC Board** | **IS42S16400J**| 
 |--------------|-----------|
@@ -72,7 +72,3 @@
 | PG4          | BA0       |
 | PG1          | A11       |
 | PG0          | A10       |
-
-[^1]: Digital Camera Interface
-[^2]: Serial Camera Control Bus
-[^3]: Synchronous Dynamic Random Address Memory
