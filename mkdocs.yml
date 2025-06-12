@@ -24,6 +24,7 @@ nav:
   - Details: Details.md
   - Drivers: Drivers.md
   - Image Filtering: image_filtering_module.md
+  - References: References.md
   
 plugins:
   - search
