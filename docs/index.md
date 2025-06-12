@@ -4,6 +4,7 @@ Welcome to the **Capture the Moment** project documentation. This project combin
 
 ![Clock Configuration](img/clock_conf.png)
 
+![Demo](img/demo.gif)
 ---
 
 ## 📚 Sections
