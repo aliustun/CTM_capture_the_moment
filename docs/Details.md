@@ -4,15 +4,15 @@ This project is proposed in accordance with the ELE529E Lecture at Istanbul Tech
 
 ## 1. Introduction
 
-This project investigates real-time image processing using FreeRTOS[^1] on STM32F429I Discovery Board. The board features a built-in LCD[^2] and supports DCMI[^3], making it ideal for interfacing with external cameras such as the OV7670. Applications of such embedded vision systems include industrial automation, surveillance, and portable diagnostics.
+This project investigates real-time image processing using FreeRTOS on STM32F429I Discovery Board. The board features a built-in LCD and supports DCMI, making it ideal for interfacing with external cameras such as the OV7670. Applications of such embedded vision systems include industrial automation, surveillance, and portable diagnostics.
 
 ## 2. System Architecture
 
-The system consists of a camera input, memory buffering using DMA[^4], and LCD output. The architecture uses:
-- **OV7670** camera module connected via DCMI and SSCB[^5]
+The system consists of a camera input, memory buffering using DMA, and LCD output. The architecture uses:
+- **OV7670** camera module connected via DCMI and SCCB
 - **DMA** for efficient memory transfer
 - **Frame buffer** in RAM or SDRAM
-- **SPI**[^6] for driving the onboard LCD
+- **SPI** for driving the onboard LCD
 - **FreeRTOS** for managing concurrent tasks
 
 ```mermaid
@@ -76,12 +76,3 @@ This project demonstrates a basic embedded vision pipeline using RTOS. Future ex
 3. AN5020: STM32F4 DCMI Interface Application Note  
 4. FreeRTOS Documentation – https://freertos.org  
 5. STM32 HAL Reference Manual  
-
-
-[^1]: Real-Time Operating System
-[^2]: Liquid Crystal Display
-[^3]: Digital Camera Interface
-[^4]: Direct Memory Access
-[^5]: Serial Camera Control Bus
-[^6]: Serial Peripheral Interface
-[^7]: Random Access Memory

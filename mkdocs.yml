@@ -22,5 +22,12 @@ nav:
   - Home: index.md
   - Hardware: Hardware.md
   - Software: Software.md
+  - Image Filtering: image_filtering_module.md
   - Details: Details.md
+
+markdown_extensions:
+  - abbr
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
 
