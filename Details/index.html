@@ -154,6 +154,16 @@
 
       </a>
 </li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../References/">
+        
+  
+    
+  
+  References
+
+      </a>
+</li>
 </ul>
 </div>
 </nav>
@@ -287,13 +297,6 @@
     </span>
 </a>
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#9-references">
-<span class="md-ellipsis">
-      9. References
-    </span>
-</a>
-</li>
 </ul>
 </nav>
 </li>
@@ -308,6 +311,13 @@
 <a class="md-nav__link" href="../image_filtering_module/">
 <span class="md-ellipsis">
     Image Filtering
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../References/">
+<span class="md-ellipsis">
+    References
   </span>
 </a>
 </li>
@@ -399,13 +409,6 @@
     </span>
 </a>
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#9-references">
-<span class="md-ellipsis">
-      9. References
-    </span>
-</a>
-</li>
 </ul>
 </nav>
 </div>
@@ -428,8 +431,8 @@
 - <strong><abbr title="Serial Peripheral Interface">SPI</abbr></strong> for driving the onboard <abbr title="Liquid Crystal Display">LCD</abbr>
 - <strong><abbr title="Free Real-Time Operating System">FreeRTOS</abbr></strong> for managing concurrent tasks</p>
 <h3 id="clock-configuration">Clock Configuration</h3>
-<p>Here, in clock configuration <abbr title="High-Speed External">HSE</abbr>, an external clock source is configured and <abbr title="Phase Locked Loop">PLL</abbr> scalers are to to it possible maximum values. 
-<img alt="Clock Configuration" src="../img/clock_conf.png"/></p>
+<p>Here, in the clock configuration, <abbr title="High-Speed External">HSE</abbr> (external oscillator) is enabled and <abbr title="Phase Locked Loop">PLL</abbr> scalers are set to their maximum allowable values.</p>
+<p><img alt="Clock Configuration" src="../img/clock_conf.png"/></p>
 <h3 id="interfaces">Interfaces</h3>
 <ul>
 <li>I2C1 is configured to set Registers of OV7670. </li>
@@ -441,50 +444,53 @@
   FreeRTOS --&gt;|Schedules| Tasks
 </div>
 <h2 id="3-rtos-based-task-scheduling">3. <abbr title="Real-Time Operating System">RTOS</abbr>-Based Task Scheduling</h2>
-<p><abbr title="Free Real-Time Operating System">FreeRTOS</abbr> tasks manage the operation as follows:
-- <strong>CameraTask</strong>: Configures and triggers <abbr title="Digital Camera Interface">DCMI</abbr> <abbr title="Direct Memory Access">DMA</abbr> captures.
-- <strong>DisplayTask</strong>: Reads from frame buffer and updates <abbr title="Liquid Crystal Display">LCD</abbr>.
-- <strong>ProcessingTask</strong> (optional): Applies filters or transformations to the frame buffer.</p>
+<p><abbr title="Free Real-Time Operating System">FreeRTOS</abbr> tasks manage the operation as follows:</p>
+<ul>
+<li><strong>CameraTask</strong>: Configures and triggers <abbr title="Digital Camera Interface">DCMI</abbr> <abbr title="Direct Memory Access">DMA</abbr> captures.</li>
+<li><strong>DisplayTask</strong>: Reads from frame buffer and updates <abbr title="Liquid Crystal Display">LCD</abbr>.</li>
+<li><strong>ProcessingTask</strong> (optional): Applies filters or transformations to the frame buffer.</li>
+</ul>
 <p>Each task uses <code>osDelay</code>, mutexes or semaphores to synchronize access to the shared buffer.</p>
 <h2 id="4-dma-and-interrupt-based-frame-capture">4. <abbr title="Direct Memory Access">DMA</abbr> and Interrupt-Based Frame Capture</h2>
-<p><abbr title="Direct Memory Access">DMA</abbr> is configured to transfer camera data from <abbr title="Digital Camera Interface">DCMI</abbr> to <abbr title="Random Access Memory">RAM</abbr>[^7], triggered on frame complete interrupts. This minimizes CPU overhead.</p>
+<p><abbr title="Direct Memory Access">DMA</abbr> is configured to transfer camera data from <abbr title="Digital Camera Interface">DCMI</abbr> to <abbr title="Random Access Memory">RAM</abbr>, triggered on frame complete interrupts. This minimizes CPU overhead.</p>
 <ul>
 <li><strong>DCMI_IRQHandler</strong>: Signals a task via semaphore or event flag.</li>
 <li><strong><abbr title="Direct Memory Access">DMA</abbr> Interrupt</strong>: Ensures frame is fully transferred before display.</li>
 </ul>
 <h2 id="5-camera-and-lcd-driver-integration">5. Camera and <abbr title="Liquid Crystal Display">LCD</abbr> Driver Integration</h2>
-<p>The BSP (Board Support Package) is used to simplify interfacing:
-- <code>stm32f429i_discovery_lcd.c</code> for <abbr title="Liquid Crystal Display">LCD</abbr> display
-- Custom <code>OV7670.c</code> using HAL I2C for <abbr title="Serial Camera Control Bus">SCCB</abbr> control
-- CubeMX-generated <code>MX_DMA_Init()</code> and <code>MX_DCMI_Init()</code> handle peripheral setup</p>
+<p>The BSP (Board Support Package) is used to simplify interfacing:</p>
+<ul>
+<li><code>stm32f429i_discovery_lcd.c</code> for <abbr title="Liquid Crystal Display">LCD</abbr> display</li>
+<li>Custom <code>OV7670.c</code> using HAL I2C for <abbr title="Serial Camera Control Bus">SCCB</abbr> control</li>
+<li>CubeMX-generated <code>MX_DMA_Init()</code> and <code>MX_DCMI_Init()</code> handle peripheral setup</li>
+</ul>
 <h2 id="6-real-time-image-filtering">6. Real-Time Image Filtering</h2>
-<p>A simple image processing pipeline can include:
-- Grayscale conversion
-- Laplacian and Gaussian filters
-- Region of Interest (ROI) detection
-- ROI-based alarm system for motion detection</p>
+<p>A simple image processing pipeline can include:</p>
+<ul>
+<li>Grayscale conversion</li>
+<li>Laplacian and Gaussian filters</li>
+<li>Region of Interest (ROI) detection</li>
+<li>ROI-based alarm system for motion detection</li>
+</ul>
 <p>This is performed inside <code>FilteringTask</code>, and the result is written to a secondary buffer before being displayed.</p>
 <h2 id="7-system-performance-and-evaluation">7. System Performance and Evaluation</h2>
+<p><strong>Frame Rate</strong>: </p>
 <ul>
-<li><strong>Frame Rate</strong>: Approx. 10-15 fps with basic processing</li>
-<li><strong>Challenges</strong>:</li>
+<li>Approx. 10-15 fps with basic processing</li>
+</ul>
+<p><strong>Challenges</strong>:</p>
+<ul>
 <li>Synchronization between camera and display</li>
 <li>OV7670 clock and timing tuning</li>
 </ul>
 <h2 id="8-conclusion-and-future-improvements">8. Conclusion and Future Improvements</h2>
-<p>This project demonstrates a basic embedded vision pipeline using <abbr title="Real-Time Operating System">RTOS</abbr>. Future extensions may include:
-- Performance optimization with <abbr title="Synchronous Dynamic Random Address Memory">SDRAM</abbr> and cache
-- Integration with TouchGFX for UI
-- Object detection using CNNs (e.g., TinyML)
-- SD card logging or USB streaming</p>
-<h2 id="9-references">9. References</h2>
-<ol>
-<li>STM32F429I-DISC1 User Manual, STMicroelectronics  </li>
-<li>OV7670 Camera Module Datasheet  </li>
-<li>AN5020: STM32F4 <abbr title="Digital Camera Interface">DCMI</abbr> Interface Application Note  </li>
-<li><abbr title="Free Real-Time Operating System">FreeRTOS</abbr> Documentation – https://freertos.org  </li>
-<li>STM32 HAL Reference Manual  </li>
-</ol>
+<p>This project demonstrates a basic embedded vision pipeline using <abbr title="Real-Time Operating System">RTOS</abbr>. Future extensions may include:</p>
+<ul>
+<li>Performance optimization with <abbr title="Synchronous Dynamic Random Address Memory">SDRAM</abbr> and cache</li>
+<li>Integration with TouchGFX for UI</li>
+<li>Object detection using CNNs (e.g., TinyML)</li>
+<li>SD card logging or USB streaming</li>
+</ul>
 </article>
 </div>
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
