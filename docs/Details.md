@@ -15,6 +15,14 @@ The system consists of a camera input, memory buffering using DMA, and LCD outpu
 - **SPI** for driving the onboard LCD
 - **FreeRTOS** for managing concurrent tasks
 
+### Clock Configuration
+Here, in clock configuration HSE, an external clock source is configured and PLL scalers are to to it possible maximum values. 
+![Clock Configuration](img/clock_conf.png)
+
+### Interfaces
+- I2C1 is configured to set Registers of OV7670. 
+- SPI5 is configured to drive TFT LCD screen.  
+
 ```mermaid
 flowchart TD
   OV7670 -->|DCMI + SSCB + DMA| RAM[Frame Buffer]
@@ -49,10 +57,11 @@ The BSP (Board Support Package) is used to simplify interfacing:
 
 A simple image processing pipeline can include:
 - Grayscale conversion
-- Thresholding
-- Sobel edge detection
+- Laplacian and Gaussian filters
+- Region of Interest (ROI) detection
+- ROI-based alarm system for motion detection
 
-This is performed inside `ProcessingTask`, and the result is written to a secondary buffer before being displayed.
+This is performed inside `FilteringTask`, and the result is written to a secondary buffer before being displayed.
 
 ## 7. System Performance and Evaluation
 

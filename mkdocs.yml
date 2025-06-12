@@ -21,9 +21,12 @@ theme:
 nav:
   - Home: index.md
   - Hardware: Hardware.md
-  - Software: Software.md
-  - Image Filtering: image_filtering_module.md
   - Details: Details.md
+  - Image Filtering: image_filtering_module.md
+  
+plugins:
+  - search
+  - mermaid2
 
 markdown_extensions:
   - abbr
