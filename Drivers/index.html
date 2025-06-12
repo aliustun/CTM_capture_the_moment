@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#lcd-driver" class="md-skip">
+        <a href="#ov7670-camera-driver-documentation" class="md-skip">
           Skip to content
         </a>
       
@@ -423,6 +423,17 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Drivers
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -432,6 +443,136 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Features
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-hardware-pins" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Hardware Pins
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      API Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#te_camera_error_codes-camera_openvoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      te_CAMERA_ERROR_CODES Camera_Open(void)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enumerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enumerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enumerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#te_camera_error_codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      te_CAMERA_ERROR_CODES
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#internal-functions-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Internal Functions (Static)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-structures-and-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Structures and Definitions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How It Works
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Example
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -497,6 +638,125 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Features
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-hardware-pins" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Hardware Pins
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      API Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#te_camera_error_codes-camera_openvoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      te_CAMERA_ERROR_CODES Camera_Open(void)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enumerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enumerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enumerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#te_camera_error_codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      te_CAMERA_ERROR_CODES
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#internal-functions-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Internal Functions (Static)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-structures-and-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Structures and Definitions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How It Works
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Example
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -518,29 +778,327 @@
   
 
 
-<h1 id="lcd-driver"><abbr title="Liquid Crystal Display">LCD</abbr> Driver</h1>
-<p>The <abbr title="Liquid Crystal Display">LCD</abbr> driver provides low-level control over a <abbr title="Thin Transistor Film">TFT</abbr> <abbr title="Liquid Crystal Display">LCD</abbr> screen connected via <abbr title="Serial Peripheral Interface">SPI</abbr>. It includes GPIO and <abbr title="Serial Peripheral Interface">SPI</abbr> initialization, display reset, and command/data communication using the ILI9341 controller protocol. </p>
-<p>Core functionalities include:</p>
-<ul>
-<li>Initialization sequence for power control, VCOM, gamma, and pixel format settings</li>
-<li>Drawing individual pixels or entire images to the display memory (GRAM)</li>
-<li>Screen rotation support in 4 directions</li>
-<li>IOCTL-style interface for issuing commands such as filling the screen, drawing pixels, or setting rotation</li>
-<li>Efficient image transfer using buffered <abbr title="Serial Peripheral Interface">SPI</abbr> communication</li>
-</ul>
-<p>The driver abstracts all hardware control so that higher-level modules can render images or UI elements easily on the screen.</p>
+<h1 id="ov7670-camera-driver-documentation">OV7670 Camera Driver Documentation</h1>
 <hr />
-<h1 id="camera-driver">Camera Driver</h1>
-<p>The camera driver handles configuration and communication with the OV7670 camera module using I2C (<abbr title="Serial Camera Control Bus">SCCB</abbr>) and <abbr title="Digital Camera Interface">DCMI</abbr> (camera interface) with <abbr title="Direct Memory Access">DMA</abbr> support for efficient image capture.</p>
-<p>Main responsibilities:</p>
+<h2 id="overview">Overview</h2>
+<p>This driver provides initialization and control routines for the OV7670 camera module using STM32F4 microcontrollers. It configures the camera through I2C (<abbr title="Serial Camera Control Bus">SCCB</abbr> protocol), sets up <abbr title="Digital Camera Interface">DCMI</abbr> for image capture, and manages <abbr title="Direct Memory Access">DMA</abbr> transfers for efficient data handling.</p>
+<hr />
+<h2 id="features">Features</h2>
 <ul>
-<li>Hardware initialization for GPIOs, I2C, <abbr title="Digital Camera Interface">DCMI</abbr>, and <abbr title="Direct Memory Access">DMA</abbr></li>
-<li>Reset and setup of camera registers for QVGA resolution and RGB565 color mode</li>
-<li>Frame acquisition using <abbr title="Direct Memory Access">DMA</abbr> into memory</li>
-<li>Exposure and white balance configuration via OV7670 register presets</li>
-<li>Integration with the <abbr title="Liquid Crystal Display">LCD</abbr> driver to preview the camera output on-screen</li>
+<li>I2C initialization and communication with OV7670 camera registers</li>
+<li><abbr title="Digital Camera Interface">DCMI</abbr> peripheral setup for image data capture</li>
+<li><abbr title="Direct Memory Access">DMA</abbr> configuration for circular buffering of camera data</li>
+<li>Clock generation for camera (XCLK) using MCU MCO output</li>
+<li>Camera register initialization with default settings for QVGA RGB565 output format</li>
 </ul>
-<p>It offers an easy-to-use interface to start the camera and stream video frames into memory with minimal CPU overhead.</p>
+<hr />
+<h2 id="supported-hardware-pins">Supported Hardware Pins</h2>
+<table>
+<thead>
+<tr>
+<th>MCU Pin</th>
+<th>Camera Signal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PB8</td>
+<td>SIOC (I2C Clock)</td>
+</tr>
+<tr>
+<td>PB9</td>
+<td>SIOD (I2C Data)</td>
+</tr>
+<tr>
+<td>PB7</td>
+<td>VSYNC</td>
+</tr>
+<tr>
+<td>PA4</td>
+<td>HS</td>
+</tr>
+<tr>
+<td>PA6</td>
+<td>PCLK</td>
+</tr>
+<tr>
+<td>PA8</td>
+<td>XCLK</td>
+</tr>
+<tr>
+<td>PE6</td>
+<td>D7</td>
+</tr>
+<tr>
+<td>PE5</td>
+<td>D6</td>
+</tr>
+<tr>
+<td>PD3</td>
+<td>D5</td>
+</tr>
+<tr>
+<td>PE4</td>
+<td>D4</td>
+</tr>
+<tr>
+<td>PC9</td>
+<td>D3</td>
+</tr>
+<tr>
+<td>PC8</td>
+<td>D2</td>
+</tr>
+<tr>
+<td>PC7</td>
+<td>D1</td>
+</tr>
+<tr>
+<td>PC6</td>
+<td>D0</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="api-reference">API Reference</h2>
+<h3 id="te_camera_error_codes-camera_openvoid">te_CAMERA_ERROR_CODES Camera_Open(void)</h3>
+<p>Initializes all required peripherals and configures the OV7670 camera module.</p>
+<p><em>Returns:</em>  </p>
+<p>E_CAMERA_ERR_NONE on success, otherwise an error code indicating the failure reason.</p>
+<hr />
+<h2 id="enumerations">Enumerations</h2>
+<h3 id="te_camera_error_codes">te_CAMERA_ERROR_CODES</h3>
+<table>
+<thead>
+<tr>
+<th>Enum</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E_CAMERA_ERR_NONE</td>
+<td>No error</td>
+</tr>
+<tr>
+<td>E_CAMERA_ERR_I2C_INIT</td>
+<td>I2C initialization failed</td>
+</tr>
+<tr>
+<td>E_CAMERA_ERR_DCMI_INIT</td>
+<td><abbr title="Digital Camera Interface">DCMI</abbr> initialization failed</td>
+</tr>
+<tr>
+<td>E_CAMERA_ERR_DMA_INIT</td>
+<td><abbr title="Direct Memory Access">DMA</abbr> initialization failed</td>
+</tr>
+<tr>
+<td>E_CAMERA_ERR_CAMERA_INIT</td>
+<td>Camera register init failed</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="internal-functions-static">Internal Functions (Static)</h2>
+<p>These functions are not exposed publicly but form the internal implementation of the driver:</p>
+<ul>
+<li>
+<p>static te_CAMERA_ERROR_CODES Camera_Init(void)<br />
+  Writes default configuration registers to the OV7670 via I2C.</p>
+</li>
+<li>
+<p>static void Camera_GPIO_Init(void)<br />
+  Configures GPIO pins for camera data, control signals, and I2C.</p>
+</li>
+<li>
+<p>static te_CAMERA_ERROR_CODES Camera_DCMI_Init(void)<br />
+  Initializes the <abbr title="Digital Camera Interface">DCMI</abbr> peripheral with proper parameters for OV7670 data capture.</p>
+</li>
+<li>
+<p>static void Camera_XCLK_Init(void)<br />
+  Sets up the MCU clock output (MCO) to provide the external clock (XCLK) signal to the camera.</p>
+</li>
+<li>
+<p>static te_CAMERA_ERROR_CODES Camera_DMA_Init(void)<br />
+  Configures the <abbr title="Direct Memory Access">DMA</abbr> stream for circular buffer mode linked to <abbr title="Digital Camera Interface">DCMI</abbr>.</p>
+</li>
+<li>
+<p>static te_CAMERA_ERROR_CODES Camera_I2C_Init(void)<br />
+  Sets up the I2C peripheral for <abbr title="Serial Camera Control Bus">SCCB</abbr> communication with OV7670.</p>
+</li>
+</ul>
+<hr />
+<h2 id="data-structures-and-definitions">Data Structures and Definitions</h2>
+<table>
+<thead>
+<tr>
+<th>Macro / Constant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OV7670_REG_NUM</td>
+<td>Number of camera registers configured (122)</td>
+</tr>
+<tr>
+<td>OV7670_WRITE_ADDR</td>
+<td>I2C write address for OV7670 (0x42)</td>
+</tr>
+<tr>
+<td>IMG_ROWS</td>
+<td>Image height in pixels (320)</td>
+</tr>
+<tr>
+<td>IMG_COLUMNS</td>
+<td>Image width in pixels (240)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="how-it-works">How It Works</h2>
+<ol>
+<li><em>Camera_Open()</em> is called to start initialization.</li>
+<li>I2C peripheral is configured for communication.</li>
+<li><abbr title="Digital Camera Interface">DCMI</abbr> peripheral is set up to capture data synchronized with camera signals.</li>
+<li><abbr title="Direct Memory Access">DMA</abbr> is configured to transfer image data continuously to memory.</li>
+<li>Camera external clock (XCLK) is generated using MCU's MCO pin.</li>
+<li>OV7670 registers are written to via I2C to configure resolution, color format, and other camera parameters.</li>
+<li>After successful initialization, the camera is ready to capture images.</li>
+</ol>
+<hr />
+<h2 id="usage-example">Usage Example</h2>
+<pre><code class="language-c">#include &quot;camera_drv.h&quot;
+
+int main(void) {
+    // HAL initialization here
+
+    te_CAMERA_ERROR_CODES status = Camera_Open();
+    if (status != E_CAMERA_ERR_NONE) {
+        // Handle error
+    }
+
+    // Start DCMI capture, DMA, etc.
+}
+</code></pre>
+<h1 id="lcd-driver-documentation"><abbr title="Liquid Crystal Display">LCD</abbr> Driver Documentation</h1>
+<p>This document describes the functions of the <abbr title="Serial Peripheral Interface">SPI</abbr>-based 320x240 <abbr title="Liquid Crystal Display">LCD</abbr> driver for STM32F4.</p>
+<hr />
+<h2 id="overview_1">Overview</h2>
+<ul>
+<li>The <abbr title="Liquid Crystal Display">LCD</abbr> is controlled via SPI5 interface.</li>
+<li>GPIO pins are configured for <abbr title="Liquid Crystal Display">LCD</abbr> control and <abbr title="Serial Peripheral Interface">SPI</abbr> communication.</li>
+<li>Basic <abbr title="Liquid Crystal Display">LCD</abbr> control functions and a generic IOCTL interface are provided.</li>
+</ul>
+<hr />
+<h2 id="functions">Functions</h2>
+<h3 id="te_lcd_error_codes-lcd_openvoid-vpparam">te_LCD_ERROR_CODES LCD_Open(void* vpParam)</h3>
+<p><em>Description:</em>  </p>
+<p>Initializes the <abbr title="Liquid Crystal Display">LCD</abbr> driver. Configures GPIO and <abbr title="Serial Peripheral Interface">SPI</abbr> peripherals, resets the <abbr title="Liquid Crystal Display">LCD</abbr>, and performs initial setup.</p>
+<p><em>Parameters:</em> </p>
+<ul>
+<li>vpParam: Generic parameter pointer (currently unused).</li>
+</ul>
+<p><em>Returns:</em>  </p>
+<ul>
+<li>E_LCD_ERR_NONE: Initialization successful.  </li>
+<li>E_LCD_ERR_SPI_INIT: <abbr title="Serial Peripheral Interface">SPI</abbr> initialization failed.</li>
+</ul>
+<hr />
+<h3 id="te_lcd_error_codes-lcd_ioctlte_lcd_ioctl_commands-ecommand-void-vpparam">te_LCD_ERROR_CODES LCD_Ioctl(te_LCD_IOCTL_COMMANDS eCommand, void * vpParam)</h3>
+<p><em>Description:</em>  </p>
+<p>General control interface for the <abbr title="Liquid Crystal Display">LCD</abbr>. Supports operations like drawing a pixel, filling the screen, displaying images, rotating the screen, etc.</p>
+<p><em>Parameters:</em>  </p>
+<ul>
+<li>eCommand: The control command to execute (e.g., E_LCD_IOCTL_DRAW_PIXEL).  </li>
+<li>vpParam: Pointer to the data or parameters required by the command.</li>
+</ul>
+<p><em>Returns:</em>  </p>
+<ul>
+<li>E_LCD_ERR_NONE: Operation successful.  </li>
+<li>E_LCD_ERR_WRONG_IOCTL_CMD: Unsupported command.</li>
+</ul>
+<hr />
+<h3 id="te_lcd_error_codes-lcd_writeconst-void-pvbuffer-const-uint32_t-xbytes">te_LCD_ERROR_CODES LCD_Write(const void *pvBuffer, const uint32_t xBytes)</h3>
+<p><em>Description:</em> </p>
+<p>Writes pixel color data to the currently active window on the <abbr title="Liquid Crystal Display">LCD</abbr>.</p>
+<p><em>Parameters:</em></p>
+<ul>
+<li>pvBuffer: Pointer to the color data buffer (of type ts_LCD_WR_TYPE).  </li>
+<li>xBytes: Number of bytes to write (not used in current implementation).</li>
+</ul>
+<p><em>Returns:</em>  </p>
+<ul>
+<li>E_LCD_ERR_NONE: Write operation successful.</li>
+</ul>
+<hr />
+<h3 id="te_lcd_error_codes-lcd_closevoid-vpparam">te_LCD_ERROR_CODES LCD_Close(void* vpParam)</h3>
+<p><em>Description:</em> </p>
+<p>Closes the <abbr title="Liquid Crystal Display">LCD</abbr> driver, turns off the display, and stops <abbr title="Serial Peripheral Interface">SPI</abbr> communication.</p>
+<p><em>Parameters:</em> </p>
+<ul>
+<li>vpParam: Generic parameter pointer (currently unused).</li>
+</ul>
+<p><em>Returns:</em>  </p>
+<ul>
+<li>E_LCD_ERR_NONE: Successfully closed.</li>
+</ul>
+<hr />
+<h3 id="static-te_lcd_error_codes-lcd_gpio_initvoid">static te_LCD_ERROR_CODES LCD_GPIO_Init(void)</h3>
+<p><em>Description:</em>  </p>
+<p>Configures GPIO pins and clocks required for the <abbr title="Liquid Crystal Display">LCD</abbr> and <abbr title="Serial Peripheral Interface">SPI</abbr> interface.</p>
+<p><em>Returns:</em>  </p>
+<ul>
+<li>E_LCD_ERR_NONE: GPIO initialization successful.</li>
+</ul>
+<hr />
+<h3 id="static-te_lcd_error_codes-lcd_spi_initvoid">static te_LCD_ERROR_CODES LCD_SPI_Init(void)</h3>
+<p><em>Description:</em>  </p>
+<p>Initializes SPI5 peripheral as a master with the necessary settings for <abbr title="Liquid Crystal Display">LCD</abbr> communication.</p>
+<p><em>Returns:</em>  </p>
+<ul>
+<li>E_LCD_ERR_NONE: <abbr title="Serial Peripheral Interface">SPI</abbr> initialization successful.  </li>
+<li>E_LCD_ERR_SPI_INIT: <abbr title="Serial Peripheral Interface">SPI</abbr> initialization failed.</li>
+</ul>
+<hr />
+<h3 id="void-lcd_resetvoid">void LCD_Reset(void)</h3>
+<p><em>Description:</em><br />
+Performs a hardware reset on the <abbr title="Liquid Crystal Display">LCD</abbr> by toggling the reset pin.</p>
+<hr />
+<h2 id="error-codes-te_lcd_error_codes">Error Codes (te_LCD_ERROR_CODES)</h2>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E_LCD_ERR_NONE</td>
+<td>Operation successful</td>
+</tr>
+<tr>
+<td>E_LCD_ERR_SPI_INIT</td>
+<td><abbr title="Serial Peripheral Interface">SPI</abbr> initialization error</td>
+</tr>
+<tr>
+<td>E_LCD_ERR_WRONG_IOCTL_CMD</td>
+<td>Invalid IOCTL command</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="usage-example_1">Usage Example</h2>
+<pre><code class="language-c">if (LCD_Open(NULL) != E_LCD_ERR_NONE) {
+    // Handle error
+}
+
+ts_LCD_DRAW_PIXEL pixel = {x, y, color};
+LCD_Ioctl(E_LCD_IOCTL_DRAW_PIXEL, &amp;pixel);
+
+LCD_Close(NULL);
+</code></pre>
 
 
 
