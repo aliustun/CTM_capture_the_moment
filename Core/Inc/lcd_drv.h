@@ -8,21 +8,56 @@
 #ifndef INC_LCD_DRV_H_
 #define INC_LCD_DRV_H_
 
-#include "stm32f4xx.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+#define LCD_DRIVER_SW_VERSION	(1.0)
 #define LCD_WIDTH	320
 #define LCD_HEIGHT	240
 
+#include "stm32f4xx.h"
+
 typedef enum {
 	E_LCD_ERR_NONE,
-	E_LCD_ERR_SPI_INIT
+	E_LCD_ERR_SPI_INIT,
+	E_LCD_ERR_LCD_INIT,
+	E_LCD_ERR_WRONG_IOCTL_CMD
 } te_LCD_ERROR_CODES;
 
 
-te_LCD_ERROR_CODES LCD_Open(void);
-void LCD_Fill_Screen(uint16_t color);
-void LCD_Display_Image(uint16_t image[LCD_WIDTH * LCD_HEIGHT]);
-void LCD_Set_Rotation(uint8_t rotation);
+typedef enum {
+	E_LCD_IOCTL_NONE,
+	E_LCD_IOCTL_GET_VERSION,
+	E_LCD_IOCTL_GET_SCREEN_WIDTH,
+	E_LCD_IOCTL_GET_SCREEN_HEIGHT,
+	E_LCD_IOCTL_DRAW_PIXEL,
+	E_LCD_IOCTL_FILL_SCREEN,
+	E_LCD_IOCTL_DRAW_IMAGE,
+	E_LCD_IOCTL_SET_ROTATION
+} te_LCD_IOCTL_COMMANDS;
+
+typedef struct {
+	uint16_t x;
+	uint16_t y;
+	uint16_t color;
+} ts_LCD_PIXEL_ATTR;
+
+typedef struct {
+	uint16_t x1;
+	uint16_t x2;
+	uint16_t y1;
+	uint16_t y2;
+	uint16_t *img;
+} ts_LCD_WR_TYPE;
+
+te_LCD_ERROR_CODES LCD_Open(void* vpParam);
+te_LCD_ERROR_CODES LCD_Ioctl(te_LCD_IOCTL_COMMANDS eCommand, void * vpParam);
+te_LCD_ERROR_CODES LCD_Write(const void *pvBuffer, const uint32_t xBytes);
+te_LCD_ERROR_CODES LCD_Read(const void *pvBuffer, const uint32_t xBytes);
+te_LCD_ERROR_CODES LCD_Close(void *vpParam);
+
+
 
 
 
@@ -79,9 +114,27 @@ void LCD_Set_Rotation(uint8_t rotation);
 #define GREENYELLOW 0xAFE5
 #define PINK        0xF81F
 
-#define SCREEN_VERTICAL_1			0
+#define SCREEN_VERTICAL_1		0
 #define SCREEN_HORIZONTAL_1		1
-#define SCREEN_VERTICAL_2			2
+#define SCREEN_VERTICAL_2		2
 #define SCREEN_HORIZONTAL_2		3
+
+#define LCD_SPI 		SPI5
+
+#define LCD_CS_PORT		GPIOC
+#define LCD_CS_PIN 		GPIO_PIN_2
+
+#define LCD_WR_PORT 	GPIOD
+#define LCD_WR_PIN 		GPIO_PIN_13
+
+#define LCD_RST_PORT	GPIOD
+#define LCD_RST_PIN		GPIO_PIN_12
+
+#define LCD_RST_PORT			GPIOD
+#define LCD_RST_PIN				GPIO_PIN_12
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* INC_LCD_DRV_H_ */

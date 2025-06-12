@@ -193,7 +193,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
-  LCD_Open();
+  LCD_Open(NULL);
   cam_error = Camera_Open();
 
   if (cam_error != E_CAMERA_ERR_NONE) while(1);
@@ -205,7 +205,7 @@ int main(void)
   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
 
   __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
-  LCD_Set_Rotation(SCREEN_HORIZONTAL_2); // Sadece bir kez çağır
+
 
   /* Program the SDRAM external device */
     SDRAM_Initialization_Sequence(&hsdram1, &command);
@@ -994,7 +994,7 @@ void StartDisplayTask(void *argument)
   for(;;)
   {
 	osSemaphoreAcquire(sem_filter_doneHandle, osWaitForever);
-	LCD_Display_Image((uint16_t *) filtered_image);
+	LCD_Ioctl(E_LCD_IOCTL_DRAW_IMAGE, filtered_image);
   }
   /* USER CODE END StartDisplayTask */
 }
