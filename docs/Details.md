@@ -9,6 +9,7 @@ This project investigates real-time image processing using FreeRTOS on STM32F429
 ## 2. System Architecture
 
 The system consists of a camera input, memory buffering using DMA, and LCD output. The architecture uses:
+
 - **OV7670** camera module connected via DCMI and SCCB
 - **DMA** for efficient memory transfer
 - **Frame buffer** in RAM or SDRAM
